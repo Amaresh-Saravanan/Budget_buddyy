@@ -1,0 +1,1711 @@
+# Product Requirements Document (PRD)
+## Budget Tracking App - FINAL VERSION
+### Dark Theme | React + CSS | Neon DB/PostgreSQL
+
+---
+
+## 1. Overview
+
+### Product Name
+**BudgetBuddy**
+
+### Vision
+A comprehensive budget tracking app with a modern dark theme that helps users manage expenses, track savings, set payment reminders, and visualize spending patterns through category-wise comparisons and analytics.
+
+### Target Users
+- Young professionals (18-35 years)
+- College students
+- Anyone wanting to track spending, savings, and recurring payments
+- People new to budgeting who need visual insights
+
+### Success Metrics
+- Daily active users (DAU)
+- Average expenses logged per user per week
+- Average savings logged per user per week
+- Reminder completion rate
+- Budget adherence rate
+- Savings streak retention
+- Category-wise spending reduction over time
+
+---
+
+## 2. Technical Stack
+
+### Frontend
+- **Framework:** React 18.3+
+- **Styling:** Vanilla CSS (NO Tailwind, NO CSS-in-JS, NO preprocessors)
+- **Routing:** React Router DOM v6
+- **State Management:** React Context API + useState/useReducer
+- **Charts:** Chart.js or Recharts (lightweight)
+- **Animations:** canvas-confetti for celebrations
+- **Build Tool:** Vite
+
+### Backend/Database
+- **Database:** Neon DB (Serverless PostgreSQL) OR PostgreSQL
+  - Neon DB is recommended for:
+    - Serverless architecture
+    - Auto-scaling
+    - Built-in connection pooling
+    - Free tier available
+  - Regular PostgreSQL alternative if preferred
+- **Database Client:** 
+  - For Neon: `@neondatabase/serverless`
+  - For PostgreSQL: `pg` (node-postgres)
+- **API:** REST API (can be built with Express.js or Next.js API routes)
+
+### Development Tools
+- **Package Manager:** npm or yarn
+- **Version Control:** Git
+- **Code Editor:** VS Code (optimized for GitHub Copilot)
+
+### Deployment (Future)
+- **Frontend:** Vercel, Netlify, or GitHub Pages
+- **Database:** Neon (cloud-hosted) or self-hosted PostgreSQL
+- **Environment Variables:** `.env` file for database credentials
+
+---
+
+## 3. Design System - Dark Theme
+
+### Color Palette
+
+```css
+/* Dark Theme Colors */
+:root {
+  /* Background Colors */
+  --bg-primary: #0f0f0f;           /* Main background */
+  --bg-secondary: #1a1a1a;         /* Cards, modals */
+  --bg-tertiary: #252525;          /* Hover states */
+  --bg-input: #2a2a2a;             /* Input fields */
+  
+  /* Text Colors */
+  --text-primary: #e0e0e0;         /* Main text */
+  --text-secondary: #a0a0a0;       /* Secondary text */
+  --text-tertiary: #707070;        /* Disabled text */
+  
+  /* Accent Colors */
+  --accent-green: #00ff88;         /* Success, savings */
+  --accent-green-dark: #00cc6f;    /* Hover state */
+  --accent-red: #ff4444;           /* Danger, expenses */
+  --accent-red-dark: #cc3636;      /* Hover state */
+  --accent-blue: #4da6ff;          /* Reminders, info */
+  --accent-blue-dark: #3d85cc;     /* Hover state */
+  --accent-yellow: #ffbb33;        /* Warning */
+  --accent-purple: #bb86fc;        /* Premium features */
+  
+  /* Status Colors */
+  --status-success: #00ff88;
+  --status-warning: #ffbb33;
+  --status-danger: #ff4444;
+  --status-info: #4da6ff;
+  
+  /* Border Colors */
+  --border-primary: #333333;
+  --border-secondary: #404040;
+  --border-accent: #505050;
+  
+  /* Shadow */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.7);
+  
+  /* Glass Effect */
+  --glass-bg: rgba(26, 26, 26, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+```
+
+### Typography
+
+```css
+/* Font System */
+:root {
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+                  'Helvetica', 'Arial', sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+  
+  /* Font Sizes */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
+  
+  /* Font Weights */
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+}
+```
+
+### Spacing System
+
+```css
+/* Spacing Scale */
+:root {
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+}
+```
+
+### Component Styles
+
+```css
+/* Button Styles */
+.btn {
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-medium);
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--accent-green);
+  color: var(--bg-primary);
+}
+
+.btn-primary:hover {
+  background: var(--accent-green-dark);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-danger {
+  background: var(--accent-red);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+/* Card Styles */
+.card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-md);
+}
+
+/* Input Styles */
+.input {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-base);
+  width: 100%;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(77, 166, 255, 0.2);
+}
+
+/* Modal/Drawer Styles */
+.modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-lg);
+}
+```
+
+### Visual Examples
+
+**Dashboard Card Example:**
+```
+┌──────────────────────────────────┐
+│  💰 Health Score                 │ ← text-primary
+│                                  │
+│      72%                         │ ← text-3xl, accent-green
+│  ████████████████░░░░░░░░        │ ← Progress bar
+│                                  │
+│  You're doing great! Keep it up  │ ← text-secondary
+└──────────────────────────────────┘
+   bg-secondary, border-primary
+```
+
+**Savings vs Spending Card:**
+```
+┌──────────────────────────────────┐
+│  📊 Savings vs Spending          │
+│                                  │
+│  Spending  ₹10,000               │ ← accent-red
+│  ████████████████░░░░            │
+│                                  │
+│  Savings   ₹5,000                │ ← accent-green
+│  ████████░░░░░░░░░░░░            │
+│                                  │
+│  Net: -₹5,000                    │ ← accent-red
+└──────────────────────────────────┘
+```
+
+**Calendar Day Cell:**
+```
+┌─────────┐
+│   15    │ ← text-primary
+├─────────┤
+│ -₹450 ↓ │ ← accent-red
+│ +₹200 ↑ │ ← accent-green
+│ 💳 Rent │ ← accent-blue
+├─────────┤
+│ -₹250   │ ← accent-red (if negative)
+│  💰 ⭐  │ ← Badges
+└─────────┘
+border: accent color based on status
+hover: border-accent, shadow-md
+```
+
+---
+
+## 4. File Structure (For GitHub Copilot)
+
+```
+budget-app/
+├── public/
+│   └── index.html
+│
+├── src/
+│   ├── components/
+│   │   ├── auth/
+│   │   │   ├── Landing.jsx
+│   │   │   ├── Landing.css
+│   │   │   ├── SignUp.jsx
+│   │   │   ├── SignUp.css
+│   │   │   ├── Login.jsx
+│   │   │   └── Login.css
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Dashboard.css
+│   │   │   ├── CategoryCard.jsx
+│   │   │   ├── CategoryCard.css
+│   │   │   ├── HealthScore.jsx
+│   │   │   ├── HealthScore.css
+│   │   │   ├── SavingsSummary.jsx
+│   │   │   ├── SavingsSummary.css
+│   │   │   ├── SavingsVsSpending.jsx
+│   │   │   ├── SavingsVsSpending.css
+│   │   │   ├── CategoryBreakdown.jsx
+│   │   │   ├── CategoryBreakdown.css
+│   │   │   ├── UpcomingReminders.jsx
+│   │   │   ├── UpcomingReminders.css
+│   │   │   ├── QuickAddButtons.jsx
+│   │   │   └── QuickAddButtons.css
+│   │   │
+│   │   ├── expenses/
+│   │   │   ├── AddExpense.jsx
+│   │   │   ├── AddExpense.css
+│   │   │   ├── ExpenseList.jsx
+│   │   │   ├── ExpenseList.css
+│   │   │   ├── ExpenseItem.jsx
+│   │   │   └── ExpenseItem.css
+│   │   │
+│   │   ├── savings/
+│   │   │   ├── AddSavings.jsx
+│   │   │   ├── AddSavings.css
+│   │   │   ├── SavingsList.jsx
+│   │   │   ├── SavingsList.css
+│   │   │   ├── SavingsItem.jsx
+│   │   │   └── SavingsItem.css
+│   │   │
+│   │   ├── reminders/
+│   │   │   ├── AddReminder.jsx
+│   │   │   ├── AddReminder.css
+│   │   │   ├── ReminderList.jsx
+│   │   │   ├── ReminderList.css
+│   │   │   ├── ReminderItem.jsx
+│   │   │   ├── ReminderItem.css
+│   │   │   ├── MarkAsPaid.jsx
+│   │   │   └── MarkAsPaid.css
+│   │   │
+│   │   ├── analytics/
+│   │   │   ├── CategoryAnalytics.jsx
+│   │   │   ├── CategoryAnalytics.css
+│   │   │   ├── CategoryComparison.jsx
+│   │   │   ├── CategoryComparison.css
+│   │   │   ├── CategoryTrends.jsx
+│   │   │   ├── CategoryTrends.css
+│   │   │   ├── SavingsVsSpendingAnalytics.jsx
+│   │   │   ├── SavingsVsSpendingAnalytics.css
+│   │   │   ├── MonthlyComparison.jsx
+│   │   │   ├── MonthlyComparison.css
+│   │   │   ├── CategoryDeepDive.jsx
+│   │   │   └── CategoryDeepDive.css
+│   │   │
+│   │   ├── calendar/
+│   │   │   ├── CalendarGrid.jsx
+│   │   │   ├── CalendarGrid.css
+│   │   │   ├── DayCell.jsx
+│   │   │   ├── DayCell.css
+│   │   │   ├── DailyDrawer.jsx
+│   │   │   ├── DailyDrawer.css
+│   │   │   ├── DailySummary.jsx
+│   │   │   └── DailySummary.css
+│   │   │
+│   │   ├── alerts/
+│   │   │   ├── BudgetWarning.jsx
+│   │   │   ├── BudgetWarning.css
+│   │   │   ├── CategoryOverBudget.jsx
+│   │   │   ├── CategoryOverBudget.css
+│   │   │   ├── OverspendAlert.jsx
+│   │   │   ├── OverspendAlert.css
+│   │   │   ├── PaymentReminder.jsx
+│   │   │   ├── PaymentReminder.css
+│   │   │   ├── PaymentOverdue.jsx
+│   │   │   ├── PaymentOverdue.css
+│   │   │   ├── SavingsMilestone.jsx
+│   │   │   ├── SavingsMilestone.css
+│   │   │   ├── HighSavingsDay.jsx
+│   │   │   ├── HighSavingsDay.css
+│   │   │   ├── PositiveBalance.jsx
+│   │   │   ├── PositiveBalance.css
+│   │   │   ├── CategoryImprovement.jsx
+│   │   │   └── CategoryImprovement.css
+│   │   │
+│   │   ├── gamification/
+│   │   │   ├── SavingsStreak.jsx
+│   │   │   ├── SavingsStreak.css
+│   │   │   ├── NoSpendCelebration.jsx
+│   │   │   ├── NoSpendCelebration.css
+│   │   │   ├── SuperSaverBadge.jsx
+│   │   │   ├── SuperSaverBadge.css
+│   │   │   ├── CategoryChampion.jsx
+│   │   │   ├── CategoryChampion.css
+│   │   │   ├── BudgetMaster.jsx
+│   │   │   ├── BudgetMaster.css
+│   │   │   ├── PaymentStreak.jsx
+│   │   │   ├── PaymentStreak.css
+│   │   │   ├── ImprovementBadge.jsx
+│   │   │   ├── ImprovementBadge.css
+│   │   │   ├── MonthlyChampion.jsx
+│   │   │   ├── MonthlyChampion.css
+│   │   │   ├── ConfettiEffect.jsx
+│   │   │   └── ConfettiEffect.css
+│   │   │
+│   │   ├── settings/
+│   │   │   ├── Settings.jsx
+│   │   │   ├── Settings.css
+│   │   │   ├── Profile.jsx
+│   │   │   ├── Profile.css
+│   │   │   ├── BudgetSettings.jsx
+│   │   │   ├── BudgetSettings.css
+│   │   │   ├── SavingsGoals.jsx
+│   │   │   ├── SavingsGoals.css
+│   │   │   ├── ReminderSettings.jsx
+│   │   │   ├── ReminderSettings.css
+│   │   │   ├── NotificationPreferences.jsx
+│   │   │   └── NotificationPreferences.css
+│   │   │
+│   │   └── common/
+│   │       ├── Navbar.jsx
+│   │       ├── Navbar.css
+│   │       ├── Sidebar.jsx
+│   │       ├── Sidebar.css
+│   │       ├── Modal.jsx
+│   │       ├── Modal.css
+│   │       ├── Loader.jsx
+│   │       └── Loader.css
+│   │
+│   ├── pages/
+│   │   ├── HomePage.jsx
+│   │   ├── HomePage.css
+│   │   ├── ExpensesPage.jsx
+│   │   ├── ExpensesPage.css
+│   │   ├── SavingsPage.jsx
+│   │   ├── SavingsPage.css
+│   │   ├── RemindersPage.jsx
+│   │   ├── RemindersPage.css
+│   │   ├── AnalyticsPage.jsx
+│   │   ├── AnalyticsPage.css
+│   │   ├── CalendarPage.jsx
+│   │   ├── CalendarPage.css
+│   │   ├── SettingsPage.jsx
+│   │   └── SettingsPage.css
+│   │
+│   ├── context/
+│   │   ├── AuthContext.jsx
+│   │   └── AppContext.jsx
+│   │
+│   ├── services/
+│   │   ├── authService.js
+│   │   ├── budgetService.js
+│   │   ├── expenseService.js
+│   │   ├── savingsService.js
+│   │   ├── reminderService.js
+│   │   ├── analyticsService.js
+│   │   └── db.js (Database connection config)
+│   │
+│   ├── utils/
+│   │   ├── calculations.js
+│   │   ├── helpers.js
+│   │   ├── dateUtils.js
+│   │   └── validators.js
+│   │
+│   ├── styles/
+│   │   ├── index.css           (Global styles + CSS variables)
+│   │   ├── reset.css           (CSS reset/normalize)
+│   │   └── animations.css      (Reusable animations)
+│   │
+│   ├── App.jsx
+│   ├── App.css
+│   └── main.jsx
+│
+├── .env.example
+├── .env
+├── .gitignore
+├── package.json
+├── vite.config.js
+└── README.md
+```
+
+---
+
+## 5. Database Setup Instructions
+
+### Option 1: Neon DB (Recommended)
+
+**Step 1: Create Neon Account**
+- Go to https://neon.tech
+- Sign up for free account
+- Create new project
+
+**Step 2: Get Connection String**
+```
+postgresql://[user]:[password]@[host]/[database]?sslmode=require
+```
+
+**Step 3: Install Dependencies**
+```bash
+npm install @neondatabase/serverless
+```
+
+**Step 4: Create `.env` file**
+```env
+DATABASE_URL=postgresql://[user]:[password]@[host]/[database]?sslmode=require
+```
+
+**Step 5: Database Connection (`src/services/db.js`)**
+```javascript
+import { neon } from '@neondatabase/serverless';
+
+const sql = neon(process.env.DATABASE_URL);
+
+export default sql;
+```
+
+---
+
+### Option 2: PostgreSQL (Self-Hosted)
+
+**Step 1: Install PostgreSQL**
+- Download from https://www.postgresql.org/download/
+- Install and set up
+
+**Step 2: Create Database**
+```bash
+createdb budget_app
+```
+
+**Step 3: Install Dependencies**
+```bash
+npm install pg
+```
+
+**Step 4: Create `.env` file**
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_NAME=budget_app
+```
+
+**Step 5: Database Connection (`src/services/db.js`)**
+```javascript
+import pkg from 'pg';
+const { Pool } = pkg;
+
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+});
+
+export const query = (text, params) => pool.query(text, params);
+export default pool;
+```
+
+---
+
+## 6. Database Schema (SQL)
+
+### Create Tables Script
+
+```sql
+-- Users Table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Budgets Table
+CREATE TABLE budgets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  month DATE NOT NULL,
+  total_budget DECIMAL(10,2) NOT NULL,
+  savings_goal DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, month)
+);
+
+-- Category Budgets Table
+CREATE TABLE category_budgets (
+  id SERIAL PRIMARY KEY,
+  budget_id INTEGER REFERENCES budgets(id) ON DELETE CASCADE,
+  category VARCHAR(50) NOT NULL,
+  allocated_amount DECIMAL(10,2) NOT NULL,
+  percentage DECIMAL(5,2),
+  UNIQUE(budget_id, category)
+);
+
+-- Expenses Table
+CREATE TABLE expenses (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  description TEXT,
+  date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_expenses_user_date ON expenses(user_id, date);
+CREATE INDEX idx_expenses_category ON expenses(category);
+
+-- Savings Table
+CREATE TABLE savings (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL,
+  description TEXT,
+  category VARCHAR(50),
+  date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_savings_user_date ON savings(user_id, date);
+
+-- Payment Reminders Table
+CREATE TABLE reminders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  amount DECIMAL(10,2),
+  due_date DATE NOT NULL,
+  frequency VARCHAR(20) DEFAULT 'one-time',
+  category VARCHAR(50),
+  alert_days_before INTEGER DEFAULT 2,
+  status VARCHAR(20) DEFAULT 'pending',
+  is_recurring BOOLEAN DEFAULT FALSE,
+  last_paid_date DATE,
+  next_due_date DATE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_reminders_user_status ON reminders(user_id, status);
+CREATE INDEX idx_reminders_due_date ON reminders(due_date);
+
+-- Streaks Table
+CREATE TABLE streaks (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  current_streak INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  last_logged DATE,
+  total_savings DECIMAL(10,2) DEFAULT 0,
+  payment_streak INTEGER DEFAULT 0,
+  UNIQUE(user_id)
+);
+
+-- Daily Summary Table (for faster calendar queries)
+CREATE TABLE daily_summary (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  total_spent DECIMAL(10,2) DEFAULT 0,
+  total_saved DECIMAL(10,2) DEFAULT 0,
+  net DECIMAL(10,2) DEFAULT 0,
+  is_no_spend_day BOOLEAN DEFAULT FALSE,
+  is_high_savings_day BOOLEAN DEFAULT FALSE,
+  has_reminder BOOLEAN DEFAULT FALSE,
+  reminder_count INTEGER DEFAULT 0,
+  UNIQUE(user_id, date)
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_daily_summary_user_date ON daily_summary(user_id, date);
+
+-- Category Summary Table (for analytics)
+CREATE TABLE category_summary (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  category VARCHAR(50) NOT NULL,
+  month DATE NOT NULL,
+  total_spent DECIMAL(10,2) DEFAULT 0,
+  budget_allocated DECIMAL(10,2),
+  transaction_count INTEGER DEFAULT 0,
+  average_transaction DECIMAL(10,2),
+  UNIQUE(user_id, category, month)
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_category_summary_user_month ON category_summary(user_id, month);
+
+-- Monthly Comparison Table (pre-calculated for performance)
+CREATE TABLE monthly_comparison (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  month DATE NOT NULL,
+  total_spent DECIMAL(10,2),
+  total_saved DECIMAL(10,2),
+  savings_rate DECIMAL(5,2),
+  categories_under_budget INTEGER,
+  categories_over_budget INTEGER,
+  UNIQUE(user_id, month)
+);
+
+-- Create index for faster queries
+CREATE INDEX idx_monthly_comparison_user_month ON monthly_comparison(user_id, month);
+```
+
+---
+
+## 7. Component Implementation Guide (For Copilot)
+
+### Example: Dashboard Component
+
+**File: `src/components/dashboard/Dashboard.jsx`**
+
+```jsx
+// Dashboard.jsx - Main dashboard component
+// Dark theme styling with cards for health score, savings, categories
+// Uses AuthContext for user data
+// Fetches budget, expenses, savings, reminders from services
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import HealthScore from './HealthScore';
+import SavingsSummary from './SavingsSummary';
+import SavingsVsSpending from './SavingsVsSpending';
+import CategoryBreakdown from './CategoryBreakdown';
+import CategoryCard from './CategoryCard';
+import UpcomingReminders from './UpcomingReminders';
+import QuickAddButtons from './QuickAddButtons';
+import { getBudget } from '../../services/budgetService';
+import { getExpenses } from '../../services/expenseService';
+import { getSavings } from '../../services/savingsService';
+import { getUpcomingReminders } from '../../services/reminderService';
+import './Dashboard.css';
+
+function Dashboard() {
+  const { user } = useAuth();
+  const [budget, setBudget] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [savings, setSavings] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      
+      const [budgetData, expensesData, savingsData, remindersData] = await Promise.all([
+        getBudget(user.id, currentMonth),
+        getExpenses(user.id, currentMonth),
+        getSavings(user.id, currentMonth),
+        getUpcomingReminders(user.id)
+      ]);
+
+      setBudget(budgetData);
+      setExpenses(expensesData);
+      setSavings(savingsData);
+      setReminders(remindersData);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="loader">Loading...</div>;
+  }
+
+  return (
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <h1>Welcome back, {user.name}!</h1>
+        <p className="dashboard-subtitle">Here's your financial overview</p>
+      </header>
+
+      <div className="dashboard-grid">
+        {/* Health Score */}
+        <HealthScore budget={budget} expenses={expenses} />
+
+        {/* Savings vs Spending */}
+        <SavingsVsSpending expenses={expenses} savings={savings} />
+
+        {/* Category Breakdown */}
+        <CategoryBreakdown expenses={expenses} />
+
+        {/* Upcoming Reminders */}
+        <UpcomingReminders reminders={reminders} />
+
+        {/* Category Cards */}
+        <div className="category-cards-section">
+          <h2>Category Spending</h2>
+          <div className="category-cards-grid">
+            {budget?.categories?.map((category) => (
+              <CategoryCard
+                key={category.name}
+                category={category}
+                expenses={expenses.filter(e => e.category === category.name)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Quick Add Buttons */}
+      <QuickAddButtons onUpdate={fetchDashboardData} />
+    </div>
+  );
+}
+
+export default Dashboard;
+```
+
+**File: `src/components/dashboard/Dashboard.css`**
+
+```css
+/* Dashboard.css - Dark theme styling for dashboard */
+
+.dashboard {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: var(--space-6);
+  color: var(--text-primary);
+}
+
+.dashboard-header {
+  margin-bottom: var(--space-8);
+}
+
+.dashboard-header h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.dashboard-subtitle {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.category-cards-section {
+  grid-column: 1 / -1;
+}
+
+.category-cards-section h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.category-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-4);
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: var(--text-lg);
+  color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: var(--space-4);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+```
+
+---
+
+### Example: Category Card Component
+
+**File: `src/components/dashboard/CategoryCard.jsx`**
+
+```jsx
+// CategoryCard.jsx - Shows individual category spending with progress bar
+// Dark theme with color-coded status (green/yellow/red)
+// Props: category (name, budget), expenses (filtered by category)
+
+import React from 'react';
+import './CategoryCard.css';
+
+function CategoryCard({ category, expenses }) {
+  const totalSpent = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+  const budgetAllocated = parseFloat(category.allocated_amount);
+  const percentageUsed = (totalSpent / budgetAllocated) * 100;
+  const remaining = budgetAllocated - totalSpent;
+
+  // Determine status color
+  const getStatusColor = () => {
+    if (percentageUsed < 80) return 'success';
+    if (percentageUsed < 100) return 'warning';
+    return 'danger';
+  };
+
+  const statusColor = getStatusColor();
+
+  return (
+    <div className={`category-card category-card--${statusColor}`}>
+      <div className="category-card-header">
+        <span className="category-icon">{getCategoryIcon(category.category)}</span>
+        <h3 className="category-name">{category.category}</h3>
+      </div>
+
+      <div className="category-amounts">
+        <div className="amount-spent">
+          <span className="amount-label">Spent</span>
+          <span className="amount-value">₹{totalSpent.toLocaleString()}</span>
+        </div>
+        <div className="amount-budget">
+          <span className="amount-label">Budget</span>
+          <span className="amount-value">₹{budgetAllocated.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="category-progress">
+        <div className="progress-bar">
+          <div 
+            className={`progress-fill progress-fill--${statusColor}`}
+            style={{ width: `${Math.min(percentageUsed, 100)}%` }}
+          />
+        </div>
+        <span className="progress-percentage">{percentageUsed.toFixed(0)}%</span>
+      </div>
+
+      <div className="category-remaining">
+        {remaining >= 0 ? (
+          <span className="remaining-text">₹{remaining.toLocaleString()} remaining</span>
+        ) : (
+          <span className="over-budget-text">₹{Math.abs(remaining).toLocaleString()} over budget</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Helper function to get emoji icon for category
+function getCategoryIcon(categoryName) {
+  const icons = {
+    'Food & Dining': '🍔',
+    'Transportation': '🚗',
+    'Entertainment': '🎬',
+    'Shopping': '🛍️',
+    'Bills & Utilities': '💡',
+    'Others': '📦'
+  };
+  return icons[categoryName] || '📦';
+}
+
+export default CategoryCard;
+```
+
+**File: `src/components/dashboard/CategoryCard.css`**
+
+```css
+/* CategoryCard.css - Dark theme category card with status colors */
+
+.category-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  border: 1px solid var(--border-primary);
+  transition: all 0.3s ease;
+}
+
+.category-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.category-card--success {
+  border-left: 3px solid var(--status-success);
+}
+
+.category-card--warning {
+  border-left: 3px solid var(--status-warning);
+}
+
+.category-card--danger {
+  border-left: 3px solid var(--status-danger);
+}
+
+.category-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.category-icon {
+  font-size: var(--text-2xl);
+}
+
+.category-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.category-amounts {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.amount-spent,
+.amount-budget {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.amount-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.amount-value {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+}
+
+.category-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-fill--success {
+  background: var(--status-success);
+}
+
+.progress-fill--warning {
+  background: var(--status-warning);
+}
+
+.progress-fill--danger {
+  background: var(--status-danger);
+}
+
+.progress-percentage {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: right;
+}
+
+.category-remaining {
+  text-align: center;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-primary);
+}
+
+.remaining-text {
+  font-size: var(--text-sm);
+  color: var(--status-success);
+  font-weight: var(--font-medium);
+}
+
+.over-budget-text {
+  font-size: var(--text-sm);
+  color: var(--status-danger);
+  font-weight: var(--font-medium);
+}
+```
+
+---
+
+## 8. Service Layer Examples
+
+### Budget Service
+
+**File: `src/services/budgetService.js`**
+
+```javascript
+// budgetService.js - Handles all budget-related database operations
+// Uses Neon DB or PostgreSQL connection from db.js
+
+import sql from './db.js'; // Neon DB
+// OR
+// import { query } from './db.js'; // PostgreSQL
+
+// Get budget for a specific month
+export async function getBudget(userId, month) {
+  try {
+    // For Neon DB
+    const result = await sql`
+      SELECT b.*, 
+             json_agg(
+               json_build_object(
+                 'category', cb.category,
+                 'allocated_amount', cb.allocated_amount,
+                 'percentage', cb.percentage
+               )
+             ) as categories
+      FROM budgets b
+      LEFT JOIN category_budgets cb ON b.id = cb.budget_id
+      WHERE b.user_id = ${userId} 
+        AND b.month = ${month}
+      GROUP BY b.id
+    `;
+
+    // For PostgreSQL
+    // const result = await query(
+    //   `SELECT b.*, 
+    //      json_agg(...) as categories
+    //    FROM budgets b
+    //    LEFT JOIN category_budgets cb ON b.id = cb.budget_id
+    //    WHERE b.user_id = $1 AND b.month = $2
+    //    GROUP BY b.id`,
+    //   [userId, month]
+    // );
+
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error fetching budget:', error);
+    throw error;
+  }
+}
+
+// Create new budget with category allocations
+export async function createBudget(userId, month, totalBudget, savingsGoal, categories) {
+  try {
+    // Insert budget
+    const budgetResult = await sql`
+      INSERT INTO budgets (user_id, month, total_budget, savings_goal)
+      VALUES (${userId}, ${month}, ${totalBudget}, ${savingsGoal})
+      RETURNING *
+    `;
+
+    const budgetId = budgetResult[0].id;
+
+    // Insert category budgets
+    for (const category of categories) {
+      await sql`
+        INSERT INTO category_budgets (budget_id, category, allocated_amount, percentage)
+        VALUES (${budgetId}, ${category.category}, ${category.allocated_amount}, ${category.percentage})
+      `;
+    }
+
+    return getBudget(userId, month);
+  } catch (error) {
+    console.error('Error creating budget:', error);
+    throw error;
+  }
+}
+
+// Update budget
+export async function updateBudget(budgetId, totalBudget, savingsGoal, categories) {
+  try {
+    // Update main budget
+    await sql`
+      UPDATE budgets
+      SET total_budget = ${totalBudget}, savings_goal = ${savingsGoal}
+      WHERE id = ${budgetId}
+    `;
+
+    // Delete existing category budgets
+    await sql`
+      DELETE FROM category_budgets WHERE budget_id = ${budgetId}
+    `;
+
+    // Insert new category budgets
+    for (const category of categories) {
+      await sql`
+        INSERT INTO category_budgets (budget_id, category, allocated_amount, percentage)
+        VALUES (${budgetId}, ${category.category}, ${category.allocated_amount}, ${category.percentage})
+      `;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error updating budget:', error);
+    throw error;
+  }
+}
+```
+
+---
+
+### Expense Service
+
+**File: `src/services/expenseService.js`**
+
+```javascript
+// expenseService.js - Handles all expense-related database operations
+
+import sql from './db.js';
+
+// Get all expenses for a user (optional: filter by month)
+export async function getExpenses(userId, month = null) {
+  try {
+    if (month) {
+      const result = await sql`
+        SELECT * FROM expenses
+        WHERE user_id = ${userId}
+          AND date >= ${month + '-01'}
+          AND date < (${month + '-01'}::date + interval '1 month')
+        ORDER BY date DESC, created_at DESC
+      `;
+      return result;
+    } else {
+      const result = await sql`
+        SELECT * FROM expenses
+        WHERE user_id = ${userId}
+        ORDER BY date DESC, created_at DESC
+      `;
+      return result;
+    }
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    throw error;
+  }
+}
+
+// Add new expense
+export async function addExpense(userId, amount, category, description, date) {
+  try {
+    const result = await sql`
+      INSERT INTO expenses (user_id, amount, category, description, date)
+      VALUES (${userId}, ${amount}, ${category}, ${description}, ${date})
+      RETURNING *
+    `;
+
+    // Update daily summary
+    await updateDailySummary(userId, date);
+
+    return result[0];
+  } catch (error) {
+    console.error('Error adding expense:', error);
+    throw error;
+  }
+}
+
+// Delete expense
+export async function deleteExpense(expenseId, userId, date) {
+  try {
+    await sql`
+      DELETE FROM expenses WHERE id = ${expenseId} AND user_id = ${userId}
+    `;
+
+    // Update daily summary
+    await updateDailySummary(userId, date);
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    throw error;
+  }
+}
+
+// Helper function to update daily summary
+async function updateDailySummary(userId, date) {
+  try {
+    const expenses = await sql`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM expenses
+      WHERE user_id = ${userId} AND date = ${date}
+    `;
+
+    const savings = await sql`
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM savings
+      WHERE user_id = ${userId} AND date = ${date}
+    `;
+
+    const totalSpent = parseFloat(expenses[0].total);
+    const totalSaved = parseFloat(savings[0].total);
+    const net = totalSaved - totalSpent;
+
+    await sql`
+      INSERT INTO daily_summary (user_id, date, total_spent, total_saved, net, is_no_spend_day, is_high_savings_day)
+      VALUES (${userId}, ${date}, ${totalSpent}, ${totalSaved}, ${net}, ${totalSpent === 0}, ${totalSaved >= 500})
+      ON CONFLICT (user_id, date)
+      DO UPDATE SET
+        total_spent = ${totalSpent},
+        total_saved = ${totalSaved},
+        net = ${net},
+        is_no_spend_day = ${totalSpent === 0},
+        is_high_savings_day = ${totalSaved >= 500}
+    `;
+  } catch (error) {
+    console.error('Error updating daily summary:', error);
+  }
+}
+
+// Get expenses by category
+export async function getExpensesByCategory(userId, month) {
+  try {
+    const result = await sql`
+      SELECT 
+        category,
+        SUM(amount) as total,
+        COUNT(*) as count,
+        AVG(amount) as average
+      FROM expenses
+      WHERE user_id = ${userId}
+        AND date >= ${month + '-01'}
+        AND date < (${month + '-01'}::date + interval '1 month')
+      GROUP BY category
+      ORDER BY total DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error('Error fetching expenses by category:', error);
+    throw error;
+  }
+}
+```
+
+---
+
+## 9. Utility Functions
+
+**File: `src/utils/calculations.js`**
+
+```javascript
+// calculations.js - All calculation/formula functions for the app
+// Used across components for consistency
+
+// Health Score: (budget - spent) / budget * 100
+export function calculateHealthScore(spent, budget) {
+  if (!budget || budget === 0) return 0;
+  const score = ((budget - spent) / budget) * 100;
+  return Math.max(0, Math.min(100, score)); // Clamp between 0-100
+}
+
+// Net Position: saved - spent
+export function calculateNet(saved, spent) {
+  return saved - spent;
+}
+
+// Savings Rate: saved / (spent + saved) * 100
+export function calculateSavingsRate(saved, spent) {
+  const total = saved + spent;
+  if (total === 0) return 0;
+  return (saved / total) * 100;
+}
+
+// Savings Progress: totalSaved / savingsGoal * 100
+export function calculateSavingsProgress(totalSaved, savingsGoal) {
+  if (!savingsGoal || savingsGoal === 0) return 0;
+  return Math.min(100, (totalSaved / savingsGoal) * 100);
+}
+
+// Projected Monthly Savings: dailyAverage * daysLeft
+export function projectMonthlySavings(dailyAverage, daysLeft) {
+  return dailyAverage * daysLeft;
+}
+
+// Daily Average Savings: totalSaved / daysPassed
+export function calculateDailySavingsAverage(totalSaved, daysPassed) {
+  if (daysPassed === 0) return 0;
+  return totalSaved / daysPassed;
+}
+
+// Category Percentage: categorySpent / totalSpent * 100
+export function calculateCategoryPercentage(categorySpent, totalSpent) {
+  if (totalSpent === 0) return 0;
+  return (categorySpent / totalSpent) * 100;
+}
+
+// Category Change: (current - previous) / previous * 100
+export function calculateCategoryChange(current, previous) {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return ((current - previous) / previous) * 100;
+}
+
+// Category Budget Status: 'under' | 'warning' | 'over'
+export function getCategoryBudgetStatus(spent, allocated) {
+  const percentage = (spent / allocated) * 100;
+  if (percentage < 80) return 'under';
+  if (percentage < 100) return 'warning';
+  return 'over';
+}
+
+// Days Until Due: difference between dueDate and today
+export function daysUntilDue(dueDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const diffTime = due - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+// Is Overdue: dueDate < today
+export function isOverdue(dueDate) {
+  return daysUntilDue(dueDate) < 0;
+}
+
+// Is High Savings Day: amount >= 500
+export function isHighSavingsDay(amount) {
+  return amount >= 500;
+}
+
+// Is No Spend Day: amount === 0
+export function isNoSpendDay(amount) {
+  return amount === 0;
+}
+
+// Is Super Saver Day: saved > spent (and spent > 0)
+export function isSuperSaverDay(saved, spent) {
+  return saved > spent && spent > 0;
+}
+
+// Trend Direction: 'up' | 'down' | 'same'
+export function getTrendDirection(current, previous) {
+  if (current > previous) return 'up';
+  if (current < previous) return 'down';
+  return 'same';
+}
+
+// Next Reminder Due Date (for recurring)
+export function calculateNextDueDate(lastDueDate, frequency) {
+  const last = new Date(lastDueDate);
+  
+  switch(frequency) {
+    case 'daily':
+      last.setDate(last.getDate() + 1);
+      break;
+    case 'weekly':
+      last.setDate(last.getDate() + 7);
+      break;
+    case 'monthly':
+      last.setMonth(last.getMonth() + 1);
+      break;
+    case 'quarterly':
+      last.setMonth(last.getMonth() + 3);
+      break;
+    case 'yearly':
+      last.setFullYear(last.getFullYear() + 1);
+      break;
+    default:
+      return null;
+  }
+  
+  return last;
+}
+
+// Format currency: 1000 -> ₹1,000
+export function formatCurrency(amount) {
+  return `₹${parseFloat(amount).toLocaleString('en-IN')}`;
+}
+
+// Format percentage: 0.75 -> 75%
+export function formatPercentage(value) {
+  return `${Math.round(value)}%`;
+}
+```
+
+---
+
+## 10. GitHub Copilot Prompts
+
+### When creating components, use these prompts:
+
+**For Dashboard:**
+```
+Create a React dashboard component with dark theme using the CSS variables from index.css. 
+Show health score, savings vs spending, category breakdown, and upcoming reminders.
+Fetch data from budgetService, expenseService, savingsService, and reminderService.
+Use grid layout for cards. Include loading state.
+```
+
+**For Category Card:**
+```
+Create a CategoryCard component with dark theme.
+Props: category (name, allocated_amount), expenses array.
+Calculate total spent, percentage used, remaining budget.
+Show progress bar with color coding: green (<80%), yellow (80-100%), red (>100%).
+Include hover effect with transform and shadow.
+```
+
+**For Calendar:**
+```
+Create a calendar grid component showing a month view with dark theme.
+Each day cell should display: expenses (red), savings (green), reminders (blue), net position.
+Include badges for no-spend days, high-savings days.
+Color-code borders based on net position.
+Click on day opens drawer with 3 tabs: expenses, savings, reminders.
+```
+
+**For Analytics:**
+```
+Create a category analytics page with dark theme.
+Show pie chart for category distribution using Chart.js.
+Display month-over-month comparison with bar chart.
+Include table with category name, current month spending, last month, change percentage.
+Highlight winners (decreased spending) in green, losers (increased) in red.
+```
+
+**For Service Functions:**
+```
+Create expenseService.js with functions:
+- getExpenses(userId, month): fetch all expenses
+- addExpense(userId, amount, category, description, date): insert new expense
+- deleteExpense(id): remove expense
+- getExpensesByCategory(userId, month): group by category with totals
+Use Neon DB sql template strings for queries.
+Include error handling with try/catch.
+```
+
+---
+
+## 11. Environment Setup
+
+### `.env.example`
+
+```env
+# Database Configuration
+# For Neon DB:
+DATABASE_URL=postgresql://[user]:[password]@[host]/[database]?sslmode=require
+
+# For PostgreSQL:
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_USER=your_username
+# DB_PASSWORD=your_password
+# DB_NAME=budget_app
+
+# App Configuration
+NODE_ENV=development
+PORT=3000
+
+# JWT Secret (for authentication)
+JWT_SECRET=your_super_secret_key_change_this
+
+# Session Secret
+SESSION_SECRET=another_secret_key_change_this
+```
+
+### `package.json`
+
+```json
+{
+  "name": "budget-buddy",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.0",
+    "@neondatabase/serverless": "^0.9.0",
+    "bcryptjs": "^2.4.3",
+    "canvas-confetti": "^1.9.2",
+    "chart.js": "^4.4.0",
+    "react-chartjs-2": "^5.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.0"
+  }
+}
+```
+
+---
+
+## 12. Development Workflow
+
+### Day 1: Setup & Auth
+1. Initialize Vite project: `npm create vite@latest budget-app -- --template react`
+2. Install dependencies: `npm install`
+3. Setup Neon DB and create tables
+4. Create `.env` file with database credentials
+5. Build auth components (Landing, SignUp, Login)
+6. Implement AuthContext
+7. Setup routing
+
+### Day 2: Dashboard & Expenses
+1. Create dashboard layout
+2. Build HealthScore, CategoryCard components
+3. Implement expenseService
+4. Create AddExpense modal
+5. Build ExpenseList component
+
+### Day 3: Savings & Reminders
+1. Create savingsService
+2. Build AddSavings modal and list
+3. Implement reminderService
+4. Create AddReminder modal
+5. Build UpcomingReminders widget
+6. Create SavingsVsSpending card
+
+### Day 4-5: Calendar & Analytics
+1. Build CalendarGrid with DayCell
+2. Implement DailyDrawer with 3 tabs
+3. Create CategoryAnalytics page
+4. Build comparison charts
+5. Implement analyticsService
+
+### Day 6-7: Gamification & Polish
+1. Create all alert modals
+2. Implement streak tracking
+3. Add confetti celebrations
+4. Build settings pages
+5. CSS animations and transitions
+6. Mobile responsiveness
+7. Testing and bug fixes
+
+---
+
+## 13. Key Features Summary
+
+✅ **Expense Tracking** - Add, view, delete expenses by category
+✅ **Savings Tracking** - Log savings with descriptions
+✅ **Payment Reminders** - Recurring and one-time reminders
+✅ **Category Analytics** - Pie charts, spending breakdown
+✅ **Category Comparisons** - Month-over-month analysis
+✅ **Savings vs Spending** - Visual comparison charts
+✅ **Calendar View** - 3-way display (expenses, savings, reminders)
+✅ **Gamification** - Streaks, badges, celebrations
+✅ **Dark Theme** - Modern, eye-friendly design
+✅ **Responsive** - Mobile and desktop optimized
+
+---
+
+**Document Version:** 4.0 FINAL (GitHub Copilot Ready)  
+**Last Updated:** Feb 14, 2026  
+**Tech Stack:** React 18 + Vanilla CSS + Neon DB/PostgreSQL  
+**Theme:** Dark Mode  
+**Status:** Ready for Development with GitHub Copilot 🚀
+
+---
+
+## Important Notes for GitHub Copilot:
+
+1. **Always use dark theme CSS variables** defined in the color palette
+2. **Each component has its own CSS file** - no CSS-in-JS
+3. **Use Neon DB sql template strings** for database queries
+4. **Include error handling** in all service functions
+5. **Mobile-first responsive design** with media queries
+6. **Accessibility**: proper ARIA labels, keyboard navigation
+7. **Performance**: lazy loading, memoization where needed
+8. **Consistent naming**: camelCase for JS, kebab-case for CSS classes
