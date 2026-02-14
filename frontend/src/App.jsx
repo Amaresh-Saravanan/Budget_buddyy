@@ -5,6 +5,7 @@ import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
 import Savings from './components/Savings'
 import Reminders from './components/Reminders'
+import Dashboard from './pages/Dashboard'
 
 function AppContent() {
   const [expenses, setExpenses] = useState([])
@@ -79,9 +80,19 @@ function AppContent() {
           {/* Navigation Tabs */}
           <div className="flex gap-3 overflow-x-auto">
             <Link
+              to="/dashboard"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/dashboard' || location.pathname === '/'
+                  ? 'bg-[#03DAC6] text-[#0f0f0f] shadow-[0_0_15px_rgba(3,218,198,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#03DAC6] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              📊 Dashboard
+            </Link>
+            <Link
               to="/expenses"
               className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                location.pathname === '/expenses' || location.pathname === '/'
+                location.pathname === '/expenses'
                   ? 'bg-[#bb86fc] text-white shadow-[0_0_15px_rgba(187,134,252,0.4)]'
                   : 'text-[#a0a0a0] hover:text-[#bb86fc] hover:bg-[#0f0f0f]'
               }`}
@@ -128,10 +139,20 @@ function AppContent() {
           <Route 
             path="/" 
             element={
-              <ExpenseList 
-                expenses={expenses} 
-                onDelete={handleDeleteExpense} 
-                onUpdate={handleUpdateExpense} 
+              <Dashboard 
+                expenses={expenses}
+                savings={savings}
+                reminders={reminders}
+              />
+            } 
+          />
+          <Route 
+            path="/dashboard" 
+            element={
+              <Dashboard 
+                expenses={expenses}
+                savings={savings}
+                reminders={reminders}
               />
             } 
           />
