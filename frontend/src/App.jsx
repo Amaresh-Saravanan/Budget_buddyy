@@ -3,12 +3,17 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import Calendar from './components/Calendar'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
+import Savings from './components/Savings'
+import Reminders from './components/Reminders'
 
 function AppContent() {
   const [expenses, setExpenses] = useState([])
-  const [showForm, setShowForm] = useState(false)
+  const [savings, setSavings] = useState([])
+  const [reminders, setReminders] = useState([])
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
   const location = useLocation()
 
+  // Expense handlers
   const handleAddExpense = (newExpense) => {
     setExpenses([newExpense, ...expenses])
   }
@@ -23,6 +28,36 @@ function AppContent() {
     ))
   }
 
+  // Saving handlers
+  const handleAddSaving = (newSaving) => {
+    setSavings([newSaving, ...savings])
+  }
+
+  const handleDeleteSaving = (id) => {
+    setSavings(savings.filter(sav => sav.id !== id))
+  }
+
+  const handleUpdateSaving = (updatedSaving) => {
+    setSavings(savings.map(sav => 
+      sav.id === updatedSaving.id ? updatedSaving : sav
+    ))
+  }
+
+  // Reminder handlers
+  const handleAddReminder = (newReminder) => {
+    setReminders([newReminder, ...reminders])
+  }
+
+  const handleDeleteReminder = (id) => {
+    setReminders(reminders.filter(rem => rem.id !== id))
+  }
+
+  const handleUpdateReminder = (updatedReminder) => {
+    setReminders(reminders.map(rem => 
+      rem.id === updatedReminder.id ? updatedReminder : rem
+    ))
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#e0e0e0]">
       {/* Header with Navigation */}
@@ -34,7 +69,7 @@ function AppContent() {
             </h1>
             
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => setShowExpenseForm(true)}
               className="bg-[#bb86fc] hover:bg-[#a370e6] text-white px-6 py-2 rounded-lg font-medium transition-all hover:shadow-[0_0_20px_rgba(187,134,252,0.5)]"
             >
               + Add Expense
@@ -42,26 +77,46 @@ function AppContent() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex gap-4">
+          <div className="flex gap-3 overflow-x-auto">
             <Link
               to="/expenses"
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                location.pathname === '/expenses'
-                  ? 'bg-[#bb86fc] text-white'
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/expenses' || location.pathname === '/'
+                  ? 'bg-[#bb86fc] text-white shadow-[0_0_15px_rgba(187,134,252,0.4)]'
                   : 'text-[#a0a0a0] hover:text-[#bb86fc] hover:bg-[#0f0f0f]'
               }`}
             >
-              Expenses
+              💸 Expenses
+            </Link>
+            <Link
+              to="/savings"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/savings'
+                  ? 'bg-[#00ff88] text-[#0f0f0f] shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#00ff88] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              💰 Savings
+            </Link>
+            <Link
+              to="/reminders"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/reminders'
+                  ? 'bg-[#FFD700] text-[#0f0f0f] shadow-[0_0_15px_rgba(255,215,0,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#FFD700] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              🔔 Reminders
             </Link>
             <Link
               to="/calendar"
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                 location.pathname === '/calendar'
-                  ? 'bg-[#bb86fc] text-white'
+                  ? 'bg-[#bb86fc] text-white shadow-[0_0_15px_rgba(187,134,252,0.4)]'
                   : 'text-[#a0a0a0] hover:text-[#bb86fc] hover:bg-[#0f0f0f]'
               }`}
             >
-              Calendar
+              📅 Calendar
             </Link>
           </div>
         </div>
@@ -70,16 +125,65 @@ function AppContent() {
       {/* Main Content - Routes */}
       <main className="p-6">
         <Routes>
-          <Route path="/" element={<ExpenseList expenses={expenses} onDelete={handleDeleteExpense} onUpdate={handleUpdateExpense} />} />
-          <Route path="/expenses" element={<ExpenseList expenses={expenses} onDelete={handleDeleteExpense} onUpdate={handleUpdateExpense} />} />
-          <Route path="/calendar" element={<Calendar expenses={expenses} />} />
+          <Route 
+            path="/" 
+            element={
+              <ExpenseList 
+                expenses={expenses} 
+                onDelete={handleDeleteExpense} 
+                onUpdate={handleUpdateExpense} 
+              />
+            } 
+          />
+          <Route 
+            path="/expenses" 
+            element={
+              <ExpenseList 
+                expenses={expenses} 
+                onDelete={handleDeleteExpense} 
+                onUpdate={handleUpdateExpense} 
+              />
+            } 
+          />
+          <Route 
+            path="/savings" 
+            element={
+              <Savings 
+                savings={savings}
+                onAddSaving={handleAddSaving}
+                onDeleteSaving={handleDeleteSaving}
+                onUpdateSaving={handleUpdateSaving}
+              />
+            } 
+          />
+          <Route 
+            path="/reminders" 
+            element={
+              <Reminders 
+                reminders={reminders}
+                onAddReminder={handleAddReminder}
+                onDeleteReminder={handleDeleteReminder}
+                onUpdateReminder={handleUpdateReminder}
+              />
+            } 
+          />
+          <Route 
+            path="/calendar" 
+            element={
+              <Calendar 
+                expenses={expenses}
+                savings={savings}
+                reminders={reminders}
+              />
+            } 
+          />
         </Routes>
       </main>
 
       {/* Expense Form Modal */}
       <ExpenseForm 
-        show={showForm}
-        onClose={() => setShowForm(false)}
+        show={showExpenseForm}
+        onClose={() => setShowExpenseForm(false)}
         onAddExpense={handleAddExpense}
       />
     </div>

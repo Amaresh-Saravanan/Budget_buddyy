@@ -10,7 +10,7 @@ const categoryIcons = {
   Others: '➕'
 };
 
-const Calendar = ({ expenses = [] }) => {
+const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
@@ -20,15 +20,18 @@ const Calendar = ({ expenses = [] }) => {
   
   const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-  // Process expenses into daily data
+  // Process expenses, savings, and reminders into daily data
   const processExpensesForCalendar = () => {
     const dailyData = {};
     
+    // Add expenses
     expenses.forEach(expense => {
       const dateStr = expense.date;
       if (!dailyData[dateStr]) {
         dailyData[dateStr] = {
           expenses: [],
+          savings: [],
+          reminders: [],
           totalSpent: 0,
           saved: 0,
           dailyAllowance: 500 // This should come from user settings
@@ -37,6 +40,41 @@ const Calendar = ({ expenses = [] }) => {
       
       dailyData[dateStr].expenses.push(expense);
       dailyData[dateStr].totalSpent += expense.amount;
+    });
+    
+    // Add savings
+    savings.forEach(saving => {
+      const dateStr = saving.date;
+      if (!dailyData[dateStr]) {
+        dailyData[dateStr] = {
+          expenses: [],
+          savings: [],
+          reminders: [],
+          totalSpent: 0,
+          saved: 0,
+          dailyAllowance: 500
+        };
+      }
+      
+      dailyData[dateStr].savings.push(saving);
+      dailyData[dateStr].saved += saving.amount;
+    });
+    
+    // Add reminders
+    reminders.forEach(reminder => {
+      const dateStr = reminder.date;
+      if (!dailyData[dateStr]) {
+        dailyData[dateStr] = {
+          expenses: [],
+          savings: [],
+          reminders: [],
+          totalSpent: 0,
+          saved: 0,
+          dailyAllowance: 500
+        };
+      }
+      
+      dailyData[dateStr].reminders.push(reminder);
     });
     
     return dailyData;
@@ -120,26 +158,29 @@ const Calendar = ({ expenses = [] }) => {
         <div
           key={day}
           onClick={() => dayData && setSelectedDate({ date: dateStr, data: dayData })}
-          className={`aspect-square p-2 rounded-lg border-2 transition-all cursor-pointer
+          className={`aspect-square p-1 rounded-lg border-2 transition-all cursor-pointer text-[10px]
             ${getBorderColor(status)}
             ${isToday ? 'bg-[#bb86fc]/20' : 'bg-[#1a1a1a]'}
             ${dayData ? 'hover:border-[#bb86fc] hover:shadow-[0_0_15px_rgba(187,134,252,0.2)]' : 'opacity-50'}
           `}
         >
-          <div className="flex flex-col items-center justify-center h-full text-xs">
-            <div className="font-bold mb-1">{day}</div>
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="font-bold mb-0.5 text-xs">{day}</div>
             
             {dayData && (
               <>
-                <div className="flex items-center gap-1 text-[10px]">
+                <div className="flex items-center gap-0.5 text-[9px]">
                   {status === 'double-win' && <span>🏆</span>}
                   {status === 'no-spend' && <span>⭐</span>}
-                  {status !== 'double-win' && status !== 'no-spend' && (
-                    <span className="text-[#ff4444]">💸{dayData.totalSpent}</span>
+                  {status !== 'double-win' && status !== 'no-spend' && dayData.totalSpent > 0 && (
+                    <span className="text-[#ff4444]">💸</span>
                   )}
                 </div>
                 {dayData.saved > 0 && (
-                  <div className="text-[10px] text-[#00ff88]">💰{dayData.saved}</div>
+                  <div className="text-[9px] text-[#00ff88]">💰</div>
+                )}
+                {dayData.reminders && dayData.reminders.length > 0 && (
+                  <div className="text-[9px] text-[#FFD700]">🔔</div>
                 )}
               </>
             )}
@@ -268,18 +309,59 @@ const Calendar = ({ expenses = [] }) => {
 
               {/* Savings */}
               <div className="bg-[#0f0f0f] rounded-lg p-4 mb-6 border border-[#333]">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-4">
                   <span className="text-[#a0a0a0] text-sm uppercase tracking-wide">💰 Saved</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl font-bold text-[#00ff88]">
-                      {selectedDate.data.saved.toFixed(2)}
-                    </span>
-                    <button className="text-[#bb86fc] hover:text-[#a370e6] transition-colors">
-                      <Edit2 size={18} />
-                    </button>
+                  <span className="text-2xl font-bold text-[#00ff88]">
+                    {selectedDate.data.saved.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Savings List */}
+                {selectedDate.data.savings && selectedDate.data.savings.length > 0 && (
+                  <div className="space-y-2 mb-4">
+                    {selectedDate.data.savings.map(saving => (
+                      <div key={saving.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>💰</span>
+                          <span>{saving.note}</span>
+                        </div>
+                        <span className="text-[#00ff88]">+{saving.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedDate.data.saved === 0 && (
+                  <div className="text-center py-2 text-[#a0a0a0] text-sm">
+                    <p>No savings today</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Reminders */}
+              {selectedDate.data.reminders && selectedDate.data.reminders.length > 0 && (
+                <div className="bg-[#0f0f0f] rounded-lg p-4 mb-6 border border-[#333]">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-[#a0a0a0] text-sm uppercase tracking-wide">🔔 Reminders</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {selectedDate.data.reminders.map(reminder => (
+                      <div key={reminder.id} className="flex items-start justify-between text-sm p-3 bg-[#1a1a1a] rounded-lg border border-[#FFD700]/30">
+                        <div className="flex-1">
+                          <div className="font-medium text-[#FFD700]">{reminder.title}</div>
+                          {reminder.time && (
+                            <div className="text-xs text-[#a0a0a0] mt-1">🕐 {reminder.time}</div>
+                          )}
+                          {reminder.note && (
+                            <div className="text-xs text-[#a0a0a0] mt-1">{reminder.note}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Status */}
               <div className="bg-[#0f0f0f] rounded-lg p-4 border border-[#333]">
