@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Edit2, TrendingDown, TrendingUp } from 'lucide-react';
 
 // Category icons mapping
@@ -14,6 +14,20 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [dailyAllowance, setDailyAllowance] = useState(500);
+
+  // Load daily allowance from settings
+  useEffect(() => {
+    try {
+      const monthlyBudget = localStorage.getItem('budgetbuddy_monthlyBudget');
+      if (monthlyBudget) {
+        const budget = JSON.parse(monthlyBudget);
+        setDailyAllowance(Math.round(budget / 30));
+      }
+    } catch (e) {
+      console.log('Using default daily allowance');
+    }
+  }, []);
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
@@ -24,9 +38,15 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
   const processExpensesForCalendar = () => {
     const dailyData = {};
     
+    // Helper to normalize date to YYYY-MM-DD format
+    const normalizeDate = (dateStr) => {
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+    
     // Add expenses
     expenses.forEach(expense => {
-      const dateStr = expense.date;
+      const dateStr = normalizeDate(expense.date);
       if (!dailyData[dateStr]) {
         dailyData[dateStr] = {
           expenses: [],
@@ -44,7 +64,7 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
     
     // Add savings
     savings.forEach(saving => {
-      const dateStr = saving.date;
+      const dateStr = normalizeDate(saving.date);
       if (!dailyData[dateStr]) {
         dailyData[dateStr] = {
           expenses: [],
@@ -62,7 +82,7 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
     
     // Add reminders
     reminders.forEach(reminder => {
-      const dateStr = reminder.date;
+      const dateStr = normalizeDate(reminder.date || reminder.dueDate);
       if (!dailyData[dateStr]) {
         dailyData[dateStr] = {
           expenses: [],
@@ -109,15 +129,24 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
   };
 
   // Get day status
-  const getDayStatus = (dateStr, data) => {
-    if (!data) return null;
+  const getDayStatus = (dateStr, data, isPastDay) => {
+    // Future days - no status
+    if (!isPastDay) return null;
     
-    const { totalSpent, saved, dailyAllowance } = data;
+    // Past day with no data = no-spend day
+    if (!data) return 'no-spend';
     
+    const { totalSpent, saved } = data;
+    
+    // Double win: No spending AND saved money
     if (totalSpent === 0 && saved > 0) return 'double-win';
+    // No-spend day: No spending at all
     if (totalSpent === 0) return 'no-spend';
-    if (saved > 0) return 'saved';
+    // Saved money but also spent
+    if (saved > 0 && totalSpent <= dailyAllowance) return 'saved';
+    // Overspent: Exceeded daily allowance
     if (totalSpent > dailyAllowance) return 'overspent';
+    // Normal spending within allowance
     return 'normal';
   };
 
@@ -139,6 +168,7 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
 
     // Empty cells
     for (let i = 0; i < startingDayOfWeek; i++) {
@@ -149,41 +179,37 @@ const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = getDateString(year, month, day);
       const dayData = expenseData[dateStr];
-      const status = getDayStatus(dateStr, dayData);
-      const isToday = today.getDate() === day && 
-                      today.getMonth() === month && 
-                      today.getFullYear() === year;
+      const thisDay = new Date(year, month, day);
+      thisDay.setHours(0, 0, 0, 0);
+      const isPastDay = thisDay < today;
+      const isToday = thisDay.getTime() === today.getTime();
+      const status = getDayStatus(dateStr, dayData, isPastDay || isToday);
       
       days.push(
         <div
           key={day}
-          onClick={() => dayData && setSelectedDate({ date: dateStr, data: dayData })}
+          onClick={() => setSelectedDate({ date: dateStr, data: dayData, status })}
           className={`aspect-square p-1 rounded-lg border-2 transition-all cursor-pointer text-[10px]
             ${getBorderColor(status)}
             ${isToday ? 'bg-[#bb86fc]/20' : 'bg-[#1a1a1a]'}
-            ${dayData ? 'hover:border-[#bb86fc] hover:shadow-[0_0_15px_rgba(187,134,252,0.2)]' : 'opacity-50'}
+            hover:border-[#bb86fc] hover:shadow-[0_0_15px_rgba(187,134,252,0.2)]
           `}
         >
           <div className="flex flex-col items-center justify-center h-full">
             <div className="font-bold mb-0.5 text-xs">{day}</div>
             
-            {dayData && (
-              <>
-                <div className="flex items-center gap-0.5 text-[9px]">
-                  {status === 'double-win' && <span>🏆</span>}
-                  {status === 'no-spend' && <span>⭐</span>}
-                  {status !== 'double-win' && status !== 'no-spend' && dayData.totalSpent > 0 && (
-                    <span className="text-[#ff4444]">💸</span>
-                  )}
-                </div>
-                {dayData.saved > 0 && (
-                  <div className="text-[9px] text-[#00ff88]">💰</div>
-                )}
-                {dayData.reminders && dayData.reminders.length > 0 && (
-                  <div className="text-[9px] text-[#FFD700]">🔔</div>
-                )}
-              </>
+            {dayData && dayData.totalSpent > 0 && (
+              <div className="text-[8px] text-[#ff6b6b] font-medium truncate w-full text-center">
+                ₹{dayData.totalSpent.toLocaleString('en-IN')}
+              </div>
             )}
+            
+            <div className="flex items-center gap-0.5 text-[8px]">
+              {status === 'double-win' && <span>🏆</span>}
+              {status === 'no-spend' && <span>⭐</span>}
+              {dayData?.saved > 0 && <span className="text-[#00ff88]">💰</span>}
+              {dayData?.reminders && dayData.reminders.length > 0 && <span className="text-[#FFD700]">🔔</span>}
+            </div>
           </div>
         </div>
       );

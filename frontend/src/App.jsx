@@ -6,9 +6,35 @@ import ExpenseList from './components/ExpenseList'
 import Savings from './components/Savings'
 import Reminders from './components/Reminders'
 import Dashboard from './pages/Dashboard'
+import Analytics from './pages/Analytics'
+import Settings from './pages/Settings'
+
+// Sample expense data
+const sampleExpenses = [
+  { id: 1, description: 'Lunch at Restaurant', amount: 280, category: 'Food', date: new Date().toISOString() },
+  { id: 2, description: 'Uber Ride to Office', amount: 180, category: 'Transport', date: new Date().toISOString() },
+  { id: 3, description: 'Groceries at BigBazaar', amount: 1850, category: 'Food', date: new Date(Date.now() - 86400000).toISOString() },
+  { id: 4, description: 'Coffee & Snacks', amount: 220, category: 'Food', date: new Date(Date.now() - 86400000).toISOString() },
+  { id: 5, description: 'Auto Rickshaw', amount: 150, category: 'Transport', date: new Date(Date.now() - 86400000).toISOString() },
+  { id: 6, description: 'Dinner with Friends', amount: 1200, category: 'Food', date: new Date(Date.now() - 172800000).toISOString() },
+  { id: 7, description: 'Movie Night - PVR', amount: 850, category: 'Entertainment', date: new Date(Date.now() - 172800000).toISOString() },
+  { id: 8, description: 'Popcorn & Drinks', amount: 450, category: 'Entertainment', date: new Date(Date.now() - 172800000).toISOString() },
+  { id: 9, description: 'Electricity Bill', amount: 2200, category: 'Bills', date: new Date(Date.now() - 259200000).toISOString() },
+  { id: 10, description: 'Swiggy Order', amount: 380, category: 'Food', date: new Date(Date.now() - 259200000).toISOString() },
+  { id: 11, description: 'Metro Card Recharge', amount: 500, category: 'Transport', date: new Date(Date.now() - 345600000).toISOString() },
+  { id: 12, description: 'Zomato Dinner', amount: 520, category: 'Food', date: new Date(Date.now() - 345600000).toISOString() },
+  { id: 13, description: 'Amazon Shopping', amount: 2800, category: 'Shopping', date: new Date(Date.now() - 432000000).toISOString() },
+  { id: 14, description: 'Petrol', amount: 1200, category: 'Transport', date: new Date(Date.now() - 432000000).toISOString() },
+  { id: 15, description: 'Gym Membership', amount: 1500, category: 'Health', date: new Date(Date.now() - 518400000).toISOString() },
+  { id: 16, description: 'Medicines', amount: 650, category: 'Health', date: new Date(Date.now() - 518400000).toISOString() },
+  { id: 17, description: 'Netflix Subscription', amount: 649, category: 'Entertainment', date: new Date(Date.now() - 604800000).toISOString() },
+  { id: 18, description: 'Mobile Recharge', amount: 599, category: 'Bills', date: new Date(Date.now() - 691200000).toISOString() },
+  { id: 19, description: 'Myntra Shopping', amount: 1800, category: 'Shopping', date: new Date(Date.now() - 777600000).toISOString() },
+  { id: 20, description: 'Birthday Gift', amount: 1500, category: 'Shopping', date: new Date(Date.now() - 864000000).toISOString() },
+]
 
 function AppContent() {
-  const [expenses, setExpenses] = useState([])
+  const [expenses, setExpenses] = useState(sampleExpenses)
   const [savings, setSavings] = useState([])
   const [reminders, setReminders] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
@@ -57,6 +83,22 @@ function AppContent() {
     setReminders(reminders.map(rem => 
       rem.id === updatedReminder.id ? updatedReminder : rem
     ))
+  }
+
+  // Settings handlers
+  const handleClearAllData = () => {
+    setExpenses([])
+    setSavings([])
+    setReminders([])
+  }
+
+  const handleImportExpenses = (importedExpenses) => {
+    setExpenses(prev => [...importedExpenses, ...prev])
+  }
+
+  const handleUpdateBudgets = (categoryBudgets, monthlyBudget) => {
+    // Store budgets in localStorage (already handled in Settings)
+    console.log('Budgets updated:', categoryBudgets, monthlyBudget)
   }
 
   return (
@@ -129,6 +171,26 @@ function AppContent() {
             >
               📅 Calendar
             </Link>
+            <Link
+              to="/analytics"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/analytics'
+                  ? 'bg-[#ff6b6b] text-white shadow-[0_0_15px_rgba(255,107,107,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#ff6b6b] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              📈 Analytics
+            </Link>
+            <Link
+              to="/settings"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/settings'
+                  ? 'bg-[#a0a0a0] text-[#0f0f0f] shadow-[0_0_15px_rgba(160,160,160,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-white hover:bg-[#0f0f0f]'
+              }`}
+            >
+              ⚙️ Settings
+            </Link>
           </div>
         </div>
       </nav>
@@ -195,6 +257,28 @@ function AppContent() {
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
+              />
+            } 
+          />
+          <Route 
+            path="/analytics" 
+            element={
+              <Analytics 
+                expenses={expenses}
+                savings={savings}
+              />
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <Settings 
+                expenses={expenses}
+                savings={savings}
+                reminders={reminders}
+                onClearAllData={handleClearAllData}
+                onImportExpenses={handleImportExpenses}
+                onUpdateBudgets={handleUpdateBudgets}
               />
             } 
           />
