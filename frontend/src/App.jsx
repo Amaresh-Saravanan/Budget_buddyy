@@ -8,6 +8,9 @@ import Reminders from './components/Reminders'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
+import TestUI from "./pages/TestUI";
+
+
 
 // Sample expense data
 const sampleExpenses = [
@@ -198,81 +201,89 @@ function AppContent() {
       {/* Main Content - Routes */}
       <main className="p-6">
         <Routes>
-          <Route 
-            path="/" 
+
+          <Route
+            path="/"
             element={
-              <Dashboard 
+              <Dashboard
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
               />
-            } 
+            }
           />
-          <Route 
-            path="/dashboard" 
+
+          <Route
+            path="/dashboard"
             element={
-              <Dashboard 
+              <Dashboard
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
               />
-            } 
+            }
           />
-          <Route 
-            path="/expenses" 
+
+          <Route
+            path="/expenses"
             element={
-              <ExpenseList 
-                expenses={expenses} 
-                onDelete={handleDeleteExpense} 
-                onUpdate={handleUpdateExpense} 
+              <ExpenseList
+                expenses={expenses}
+                onDelete={handleDeleteExpense}
+                onUpdate={handleUpdateExpense}
               />
-            } 
+            }
           />
-          <Route 
-            path="/savings" 
+
+          <Route
+            path="/savings"
             element={
-              <Savings 
+              <Savings
                 savings={savings}
                 onAddSaving={handleAddSaving}
                 onDeleteSaving={handleDeleteSaving}
                 onUpdateSaving={handleUpdateSaving}
               />
-            } 
+            }
           />
-          <Route 
-            path="/reminders" 
+
+          <Route
+            path="/reminders"
             element={
-              <Reminders 
+              <Reminders
                 reminders={reminders}
                 onAddReminder={handleAddReminder}
                 onDeleteReminder={handleDeleteReminder}
                 onUpdateReminder={handleUpdateReminder}
               />
-            } 
+            }
           />
-          <Route 
-            path="/calendar" 
+
+          <Route
+            path="/calendar"
             element={
-              <Calendar 
+              <Calendar
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
               />
-            } 
+            }
           />
-          <Route 
-            path="/analytics" 
+
+          <Route
+            path="/analytics"
             element={
-              <Analytics 
+              <Analytics
                 expenses={expenses}
                 savings={savings}
               />
-            } 
+            }
           />
-          <Route 
-            path="/settings" 
+
+          <Route
+            path="/settings"
             element={
-              <Settings 
+              <Settings
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
@@ -280,10 +291,18 @@ function AppContent() {
                 onImportExpenses={handleImportExpenses}
                 onUpdateBudgets={handleUpdateBudgets}
               />
-            } 
+            }
           />
+
+          {/* ✅ TEST UI ROUTE — ADD HERE */}
+          <Route
+            path="/test-ui"
+            element={<TestUI />}
+          />
+
         </Routes>
       </main>
+
 
       {/* Expense Form Modal */}
       <ExpenseForm 
@@ -302,5 +321,9 @@ function App() {
     </BrowserRouter>
   )
 }
+
+
+
+
 
 export default App

@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import SmartAlerts from '../components/SmartAlerts'
+import WeeklyProgress from
+  "../components/gamification/WeeklyProgress";
 
 // Category icons and colors (budgets come from settings)
 const CATEGORY_COLORS = {
@@ -514,6 +516,22 @@ function Dashboard({ expenses, savings, reminders }) {
           See All Categories →
         </button>
       </div>
+      <WeeklyProgress
+        data={{
+          percent: Math.round(
+            (stats.weeklySpent /
+              (stats.monthlyBudget / 4)) *
+            100
+          ),
+          remaining:
+            stats.monthlyBudget / 4 -
+            stats.weeklySpent,
+          perDay:
+            (stats.monthlyBudget / 4 -
+              stats.weeklySpent) /
+            7,
+        }}
+      />
 
       {/* Smart Alerts & Warnings Section */}
       <SmartAlerts 

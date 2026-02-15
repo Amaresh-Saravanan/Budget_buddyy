@@ -1,4 +1,8 @@
 import { useMemo, useState, useEffect } from 'react'
+import WeeklyPulse from "../components/analytics/WeeklyPulse";
+import MonthlyTrends from "../components/analytics/MonthlyTrends";
+import CategoryDeepDive from "../components/analytics/CategoryDeepDive";
+
 
 // Category icons and colors (budgets come from localStorage)
 const CATEGORY_CONFIG = {
@@ -369,6 +373,7 @@ function Analytics({ expenses, savings }) {
         {/* Spending Tab */}
         {activeTab === 'spending' && (
           <div className="space-y-6 animate-fadeIn">
+            <WeeklyPulse />
             {/* Key Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-[#0f0f0f] rounded-lg p-4">
@@ -472,6 +477,7 @@ function Analytics({ expenses, savings }) {
         {/* Trends Tab */}
         {activeTab === 'trends' && (
           <div className="space-y-6 animate-fadeIn">
+            <MonthlyTrends />
             {/* Spending by Day of Week */}
             <div>
               <h4 className="text-[#a0a0a0] text-sm mb-3 font-medium">📆 Spending by Day of Week</h4>
