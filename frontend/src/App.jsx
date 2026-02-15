@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
+import { ClerkProvider, SignedIn, SignedOut, useUser, useClerk, useAuth } from '@clerk/clerk-react'
 import Calendar from './components/Calendar'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
@@ -8,6 +9,19 @@ import Reminders from './components/Reminders'
 import Dashboard from './pages/Dashboard'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
+import Gamification from './pages/Gamification'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import SSOCallback from './pages/SSOCallback'
+import { authAPI, expensesAPI, savingsAPI, remindersAPI } from './services/api'
+import { LogOut } from 'lucide-react'
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+if (!PUBLISHABLE_KEY) {
+  console.warn('Missing Clerk Publishable Key')
+}
 
 // Sample expense data
 const sampleExpenses = [
@@ -33,56 +47,229 @@ const sampleExpenses = [
   { id: 20, description: 'Birthday Gift', amount: 1500, category: 'Shopping', date: new Date(Date.now() - 864000000).toISOString() },
 ]
 
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  return (
+    <SignedIn>
+      {children}
+    </SignedIn>
+  )
+}
+
+// Redirect to login if not signed in
+function RequireAuth({ children }) {
+  return (
+    <>
+      <SignedIn>{children}</SignedIn>
+      <SignedOut><Navigate to="/" replace /></SignedOut>
+    </>
+  )
+}
+
+// Public Route (redirect to dashboard if already logged in)
+function PublicRoute({ children }) {
+  return (
+    <>
+      <SignedOut>{children}</SignedOut>
+      <SignedIn><Navigate to="/dashboard" replace /></SignedIn>
+    </>
+  )
+}
+
 function AppContent() {
-  const [expenses, setExpenses] = useState(sampleExpenses)
+  const { user } = useUser()
+  const { getToken } = useAuth()
+  const { signOut } = useClerk()
+  const [expenses, setExpenses] = useState([])
   const [savings, setSavings] = useState([])
   const [reminders, setReminders] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const location = useLocation()
 
-  // Expense handlers
-  const handleAddExpense = (newExpense) => {
-    setExpenses([newExpense, ...expenses])
+  // Sync user to database and fetch data when logged in
+  useEffect(() => {
+    const initializeUserData = async () => {
+      if (user) {
+        try {
+          setIsLoadingData(true)
+          const token = await getToken()
+          
+          // Sync user first
+          await authAPI.syncUser({
+            clerkId: user.id,
+            email: user.primaryEmailAddress?.emailAddress,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            imageUrl: user.imageUrl
+          }, token)
+          console.log('User synced to database')
+
+          // Fetch expenses from database
+          try {
+            const expensesRes = await expensesAPI.getAll({}, token)
+            if (expensesRes.success && expensesRes.data) {
+              setExpenses(expensesRes.data)
+            }
+          } catch (e) {
+            console.error('Failed to fetch expenses:', e)
+          }
+
+          // Fetch savings from database
+          try {
+            const savingsRes = await savingsAPI.getAll({}, token)
+            if (savingsRes.success && savingsRes.data) {
+              setSavings(savingsRes.data)
+            }
+          } catch (e) {
+            console.error('Failed to fetch savings:', e)
+          }
+
+          // Fetch reminders from database
+          try {
+            const remindersRes = await remindersAPI.getAll({}, token)
+            if (remindersRes.success && remindersRes.data) {
+              setReminders(remindersRes.data)
+            }
+          } catch (e) {
+            console.error('Failed to fetch reminders:', e)
+          }
+
+        } catch (error) {
+          console.error('Failed to initialize user data:', error)
+        } finally {
+          setIsLoadingData(false)
+        }
+      }
+    }
+    initializeUserData()
+  }, [user, getToken])
+
+  // Expense handlers - now save to database
+  const handleAddExpense = async (newExpense) => {
+    try {
+      const token = await getToken()
+      const response = await expensesAPI.create(newExpense, token)
+      if (response.success && response.data) {
+        setExpenses([response.data, ...expenses])
+      }
+    } catch (error) {
+      console.error('Failed to add expense:', error)
+      // Still add locally as fallback
+      setExpenses([{ ...newExpense, id: Date.now() }, ...expenses])
+    }
   }
 
-  const handleDeleteExpense = (id) => {
-    setExpenses(expenses.filter(exp => exp.id !== id))
+  const handleDeleteExpense = async (id) => {
+    try {
+      const token = await getToken()
+      await expensesAPI.delete(id, token)
+      setExpenses(expenses.filter(exp => exp.id !== id))
+    } catch (error) {
+      console.error('Failed to delete expense:', error)
+      setExpenses(expenses.filter(exp => exp.id !== id))
+    }
   }
 
-  const handleUpdateExpense = (updatedExpense) => {
-    setExpenses(expenses.map(exp => 
-      exp.id === updatedExpense.id ? updatedExpense : exp
-    ))
+  const handleUpdateExpense = async (updatedExpense) => {
+    try {
+      const token = await getToken()
+      const response = await expensesAPI.update(updatedExpense.id, updatedExpense, token)
+      if (response.success && response.data) {
+        setExpenses(expenses.map(exp => 
+          exp.id === updatedExpense.id ? response.data : exp
+        ))
+      }
+    } catch (error) {
+      console.error('Failed to update expense:', error)
+      setExpenses(expenses.map(exp => 
+        exp.id === updatedExpense.id ? updatedExpense : exp
+      ))
+    }
   }
 
-  // Saving handlers
-  const handleAddSaving = (newSaving) => {
-    setSavings([newSaving, ...savings])
+  // Saving handlers - now save to database
+  const handleAddSaving = async (newSaving) => {
+    try {
+      const token = await getToken()
+      const response = await savingsAPI.create(newSaving, token)
+      if (response.success && response.data) {
+        setSavings([response.data, ...savings])
+      }
+    } catch (error) {
+      console.error('Failed to add saving:', error)
+      setSavings([{ ...newSaving, id: Date.now() }, ...savings])
+    }
   }
 
-  const handleDeleteSaving = (id) => {
-    setSavings(savings.filter(sav => sav.id !== id))
+  const handleDeleteSaving = async (id) => {
+    try {
+      const token = await getToken()
+      await savingsAPI.delete(id, token)
+      setSavings(savings.filter(sav => sav.id !== id))
+    } catch (error) {
+      console.error('Failed to delete saving:', error)
+      setSavings(savings.filter(sav => sav.id !== id))
+    }
   }
 
-  const handleUpdateSaving = (updatedSaving) => {
-    setSavings(savings.map(sav => 
-      sav.id === updatedSaving.id ? updatedSaving : sav
-    ))
+  const handleUpdateSaving = async (updatedSaving) => {
+    try {
+      const token = await getToken()
+      const response = await savingsAPI.update(updatedSaving.id, updatedSaving, token)
+      if (response.success && response.data) {
+        setSavings(savings.map(sav => 
+          sav.id === updatedSaving.id ? response.data : sav
+        ))
+      }
+    } catch (error) {
+      console.error('Failed to update saving:', error)
+      setSavings(savings.map(sav => 
+        sav.id === updatedSaving.id ? updatedSaving : sav
+      ))
+    }
   }
 
-  // Reminder handlers
-  const handleAddReminder = (newReminder) => {
-    setReminders([newReminder, ...reminders])
+  // Reminder handlers - now save to database
+  const handleAddReminder = async (newReminder) => {
+    try {
+      const token = await getToken()
+      const response = await remindersAPI.create(newReminder, token)
+      if (response.success && response.data) {
+        setReminders([response.data, ...reminders])
+      }
+    } catch (error) {
+      console.error('Failed to add reminder:', error)
+      setReminders([{ ...newReminder, id: Date.now() }, ...reminders])
+    }
   }
 
-  const handleDeleteReminder = (id) => {
-    setReminders(reminders.filter(rem => rem.id !== id))
+  const handleDeleteReminder = async (id) => {
+    try {
+      const token = await getToken()
+      await remindersAPI.delete(id, token)
+      setReminders(reminders.filter(rem => rem.id !== id))
+    } catch (error) {
+      console.error('Failed to delete reminder:', error)
+      setReminders(reminders.filter(rem => rem.id !== id))
+    }
   }
 
-  const handleUpdateReminder = (updatedReminder) => {
-    setReminders(reminders.map(rem => 
-      rem.id === updatedReminder.id ? updatedReminder : rem
-    ))
+  const handleUpdateReminder = async (updatedReminder) => {
+    try {
+      const token = await getToken()
+      const response = await remindersAPI.update(updatedReminder.id, updatedReminder, token)
+      if (response.success && response.data) {
+        setReminders(reminders.map(rem => 
+          rem.id === updatedReminder.id ? response.data : rem
+        ))
+      }
+    } catch (error) {
+      console.error('Failed to update reminder:', error)
+      setReminders(reminders.map(rem => 
+        rem.id === updatedReminder.id ? updatedReminder : rem
+      ))
+    }
   }
 
   // Settings handlers
@@ -111,12 +298,36 @@ function AppContent() {
               BudgetBuddy
             </h1>
             
-            <button
-              onClick={() => setShowExpenseForm(true)}
-              className="bg-[#bb86fc] hover:bg-[#a370e6] text-white px-6 py-2 rounded-lg font-medium transition-all hover:shadow-[0_0_20px_rgba(187,134,252,0.5)]"
-            >
-              + Add Expense
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowExpenseForm(true)}
+                className="bg-[#bb86fc] hover:bg-[#a370e6] text-white px-6 py-2 rounded-lg font-medium transition-all hover:shadow-[0_0_20px_rgba(187,134,252,0.5)]"
+              >
+                + Add Expense
+              </button>
+              
+              {/* User Menu */}
+              <div className="flex items-center gap-3">
+                {user?.imageUrl && (
+                  <img 
+                    src={user.imageUrl} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full border-2 border-[#bb86fc]"
+                  />
+                )}
+                <div className="hidden sm:block text-right">
+                  <p className="text-[#e0e0e0] text-sm font-medium">{user?.fullName || user?.firstName || 'User'}</p>
+                  <p className="text-[#666] text-xs">{user?.primaryEmailAddress?.emailAddress}</p>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="p-2 text-[#a0a0a0] hover:text-[#ff6b6b] hover:bg-[#ff6b6b]/10 rounded-lg transition-all"
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -182,6 +393,16 @@ function AppContent() {
               📈 Analytics
             </Link>
             <Link
+              to="/gamification"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/gamification'
+                  ? 'bg-[#FFD700] text-[#0f0f0f] shadow-[0_0_15px_rgba(255,215,0,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#FFD700] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              🏆 Achievements
+            </Link>
+            <Link
               to="/settings"
               className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                 location.pathname === '/settings'
@@ -198,16 +419,6 @@ function AppContent() {
       {/* Main Content - Routes */}
       <main className="p-6">
         <Routes>
-          <Route 
-            path="/" 
-            element={
-              <Dashboard 
-                expenses={expenses}
-                savings={savings}
-                reminders={reminders}
-              />
-            } 
-          />
           <Route 
             path="/dashboard" 
             element={
@@ -282,6 +493,16 @@ function AppContent() {
               />
             } 
           />
+          <Route 
+            path="/gamification" 
+            element={
+              <Gamification 
+                expenses={expenses}
+                savings={savings}
+                reminders={reminders}
+              />
+            } 
+          />
         </Routes>
       </main>
 
@@ -297,9 +518,20 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY || 'pk_test_placeholder'}>
+      <BrowserRouter>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/sso-callback" element={<SSOCallback />} />
+          
+          {/* Protected Routes - Main App */}
+          <Route path="/*" element={<RequireAuth><AppContent /></RequireAuth>} />
+        </Routes>
+      </BrowserRouter>
+    </ClerkProvider>
   )
 }
 

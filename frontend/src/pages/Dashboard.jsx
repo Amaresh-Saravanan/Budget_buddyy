@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import SmartAlerts from '../components/SmartAlerts'
 
 // Category icons and colors (budgets come from settings)
@@ -51,17 +52,19 @@ function getRelativeTime(date) {
 }
 
 function Dashboard({ expenses, savings, reminders }) {
+  const { user } = useUser()
   const [showScoreDetails, setShowScoreDetails] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
   
-  // Load profile from localStorage (synced with Settings)
-  const [profile, setProfile] = useState(() => loadFromStorage('budgetbuddy_profile', {
-    name: 'User',
-    email: 'user@email.com',
+  // Get profile from Clerk user (Google sign-in)
+  const profile = {
+    name: user?.fullName || user?.firstName || 'User',
+    email: user?.primaryEmailAddress?.emailAddress || 'user@email.com',
+    imageUrl: user?.imageUrl,
     phone: '',
     currency: '₹',
     monthStartDay: 1
-  }))
+  }
 
   // Load budgets from localStorage (synced with Settings)
   const [monthlyBudget, setMonthlyBudget] = useState(() => 
@@ -74,7 +77,6 @@ function Dashboard({ expenses, savings, reminders }) {
   // Listen for localStorage changes (when Settings updates)
   useEffect(() => {
     const handleStorageChange = () => {
-      setProfile(loadFromStorage('budgetbuddy_profile', profile))
       setMonthlyBudget(loadFromStorage('budgetbuddy_monthlyBudget', 25000))
       setCategoryBudgets(loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS))
     }
@@ -93,7 +95,6 @@ function Dashboard({ expenses, savings, reminders }) {
 
   // Re-check localStorage when component mounts or route changes
   useEffect(() => {
-    setProfile(loadFromStorage('budgetbuddy_profile', profile))
     setMonthlyBudget(loadFromStorage('budgetbuddy_monthlyBudget', 25000))
     setCategoryBudgets(loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS))
   }, [])
@@ -253,9 +254,21 @@ function Dashboard({ expenses, savings, reminders }) {
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Greeting Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-[#e0e0e0]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-          Hi, {userName}! 👋
-        </h2>
+        <div className="flex items-center gap-4">
+          {profile.imageUrl && (
+            <img 
+              src={profile.imageUrl} 
+              alt="Profile" 
+              className="w-12 h-12 rounded-full border-2 border-[#bb86fc]"
+            />
+          )}
+          <div>
+            <h2 className="text-3xl font-bold text-[#e0e0e0]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+              Hi, {userName}! 👋
+            </h2>
+            <p className="text-[#666] text-sm">{profile.email}</p>
+          </div>
+        </div>
         <div className="text-right">
           <p className="text-[#666] text-sm">{new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
         </div>
