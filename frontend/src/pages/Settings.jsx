@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { useUser, useAuth } from '@clerk/clerk-react'
+import { authAPI } from '../services/api'
 
 // Default category budgets
 const DEFAULT_BUDGETS = {
@@ -62,8 +64,12 @@ function Settings({
   onUpdateBudgets,
   categoryBudgets: propCategoryBudgets
 }) {
+  const { user } = useUser()
+  const { getToken } = useAuth()
   const [activeTab, setActiveTab] = useState('profile')
   const [toast, setToast] = useState(null)
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
+  const [dbSettings, setDbSettings] = useState(null)
   const fileInputRef = useRef(null)
   
   // Load settings from localStorage on mount
@@ -76,14 +82,61 @@ function Settings({
     }
   }
 
-  // Profile state
-  const [profile, setProfile] = useState(() => loadFromStorage('budgetbuddy_profile', {
-    name: 'Rahul Kumar',
-    email: 'rahul@email.com',
-    phone: '+91 98765 43210',
-    currency: '₹',
-    monthStartDay: 1
+  // Fetch user settings from backend on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = await getToken()
+        if (token) {
+          const response = await authAPI.getMe(token)
+          if (response.success && response.data) {
+            setDbSettings(response.data.settings)
+            // Update local state with database settings
+            if (response.data.settings) {
+              const settings = response.data.settings
+              setMonthlyBudget(settings.monthlyBudget || 25000)
+              setCategoryBudgets(settings.categoryBudgets || DEFAULT_BUDGETS)
+              setNotifications(prev => ({
+                ...prev,
+                ...settings.notifications
+              }))
+              setProfile(prev => ({
+                ...prev,
+                currency: settings.currency || '₹'
+              }))
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error)
+      } finally {
+        setIsLoadingSettings(false)
+      }
+    }
+    fetchSettings()
+  }, [getToken])
+
+  // Profile state - use Clerk user data
+  const [profile, setProfile] = useState(() => ({
+    name: user?.fullName || user?.firstName || loadFromStorage('budgetbuddy_profile', { name: 'User' }).name,
+    email: user?.primaryEmailAddress?.emailAddress || loadFromStorage('budgetbuddy_profile', { email: '' }).email,
+    phone: loadFromStorage('budgetbuddy_profile', { phone: '' }).phone || '+91 98765 43210',
+    currency: loadFromStorage('budgetbuddy_profile', { currency: '₹' }).currency,
+    monthStartDay: loadFromStorage('budgetbuddy_profile', { monthStartDay: 1 }).monthStartDay,
+    imageUrl: user?.imageUrl
   }))
+  
+  // Update profile when Clerk user changes
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        name: user.fullName || user.firstName || prev.name,
+        email: user.primaryEmailAddress?.emailAddress || prev.email,
+        imageUrl: user.imageUrl
+      }))
+    }
+  }, [user])
   const [originalProfile, setOriginalProfile] = useState(profile)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   
@@ -169,14 +222,27 @@ function Settings({
   }
 
   // Save budgets
-  const handleSaveBudgets = () => {
-    saveToStorage('budgetbuddy_categoryBudgets', categoryBudgets)
-    saveToStorage('budgetbuddy_monthlyBudget', monthlyBudget)
-    if (onUpdateBudgets) {
-      onUpdateBudgets(categoryBudgets, monthlyBudget)
+  const handleSaveBudgets = async () => {
+    try {
+      const token = await getToken()
+      if (token) {
+        await authAPI.updateSettings({
+          monthlyBudget,
+          categoryBudgets,
+          currency: profile.currency
+        }, token)
+      }
+      saveToStorage('budgetbuddy_categoryBudgets', categoryBudgets)
+      saveToStorage('budgetbuddy_monthlyBudget', monthlyBudget)
+      if (onUpdateBudgets) {
+        onUpdateBudgets(categoryBudgets, monthlyBudget)
+      }
+      setHasChanges(false)
+      showToast('Budget settings saved to cloud!', 'success')
+    } catch (error) {
+      console.error('Failed to save budgets:', error)
+      showToast('Failed to save. Try again.', 'error')
     }
-    setHasChanges(false)
-    showToast('Budget settings saved!', 'success')
   }
 
   // Profile handlers
@@ -185,7 +251,7 @@ function Settings({
     setIsEditingProfile(true)
   }
 
-  const handleProfileSave = () => {
+  const handleProfileSave = async () => {
     // Validate
     if (!profile.name.trim()) {
       showToast('Name cannot be empty', 'error')
@@ -196,9 +262,20 @@ function Settings({
       return
     }
 
-    saveToStorage('budgetbuddy_profile', profile)
-    setIsEditingProfile(false)
-    showToast('Profile updated successfully!', 'success')
+    try {
+      const token = await getToken()
+      if (token) {
+        await authAPI.updateSettings({
+          currency: profile.currency
+        }, token)
+      }
+      saveToStorage('budgetbuddy_profile', profile)
+      setIsEditingProfile(false)
+      showToast('Profile updated successfully!', 'success')
+    } catch (error) {
+      console.error('Failed to save profile:', error)
+      showToast('Failed to save. Try again.', 'error')
+    }
   }
 
   const handleProfileCancel = () => {
@@ -288,10 +365,22 @@ function Settings({
   }
 
   // Notification handlers
-  const handleNotificationToggle = (key) => {
+  const handleNotificationToggle = async (key) => {
     const newNotifications = { ...notifications, [key]: !notifications[key] }
     setNotifications(newNotifications)
     saveToStorage('budgetbuddy_notifications', newNotifications)
+    
+    try {
+      const token = await getToken()
+      if (token) {
+        await authAPI.updateSettings({
+          notifications: newNotifications
+        }, token)
+      }
+    } catch (error) {
+      console.error('Failed to save notification setting:', error)
+    }
+    
     showToast(`${notifications[key] ? 'Disabled' : 'Enabled'} ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`, 'info')
   }
 
@@ -479,12 +568,23 @@ function Settings({
 
             {/* Avatar */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#bb86fc] to-[#4ecdc4] rounded-full flex items-center justify-center text-3xl font-bold text-white">
-                {profile.name.charAt(0).toUpperCase()}
-              </div>
+              {profile.imageUrl ? (
+                <img 
+                  src={profile.imageUrl} 
+                  alt="Profile" 
+                  className="w-20 h-20 rounded-full border-3 border-[#bb86fc]"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-[#bb86fc] to-[#4ecdc4] rounded-full flex items-center justify-center text-3xl font-bold text-white">
+                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+              )}
               <div>
                 <h4 className="text-xl font-semibold text-[#e0e0e0]">{profile.name}</h4>
                 <p className="text-[#666]">{profile.email}</p>
+                {user && (
+                  <p className="text-[#bb86fc] text-xs mt-1">✓ Signed in with Google</p>
+                )}
               </div>
             </div>
 
@@ -492,30 +592,12 @@ function Settings({
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[#666] text-sm mb-1 block">Full Name</label>
-                  {isEditingProfile ? (
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none transition-all"
-                    />
-                  ) : (
-                    <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.name}</p>
-                  )}
+                  <label className="text-[#666] text-sm mb-1 block">Full Name {user && <span className="text-[#bb86fc]">(from Google)</span>}</label>
+                  <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.name}</p>
                 </div>
                 <div>
-                  <label className="text-[#666] text-sm mb-1 block">Email</label>
-                  {isEditingProfile ? (
-                    <input
-                      type="email"
-                      value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none transition-all"
-                    />
-                  ) : (
-                    <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.email}</p>
-                  )}
+                  <label className="text-[#666] text-sm mb-1 block">Email {user && <span className="text-[#bb86fc]">(from Google)</span>}</label>
+                  <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.email}</p>
                 </div>
                 <div>
                   <label className="text-[#666] text-sm mb-1 block">Phone</label>
