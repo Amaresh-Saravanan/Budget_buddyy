@@ -92,6 +92,29 @@ export const savingGoals = pgTable('saving_goals', {
   updatedAt: timestamp('updated_at').defaultNow()
 })
 
+// ==================== INCOMES TABLE ====================
+export const incomes = pgTable('incomes', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  amount: real('amount').notNull(),
+  source: varchar('source', { length: 255 }).notNull(),
+  category: varchar('category', { length: 50 }).default('Other'),
+  note: text('note'),
+  date: timestamp('date').notNull().defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+})
+
+// ==================== SYNCED EMAILS TABLE (dedupe ledger) ====================
+export const syncedEmails = pgTable('synced_emails', {
+  id: serial('id').primaryKey(),
+  messageId: varchar('message_id', { length: 998 }).notNull().unique(),
+  userId: varchar('user_id', { length: 255 }).notNull(),
+  type: varchar('type', { length: 10 }).notNull(),
+  amount: real('amount'),
+  createdAt: timestamp('created_at').defaultNow()
+})
+
 // ==================== REMINDERS TABLE ====================
 export const reminders = pgTable('reminders', {
   id: serial('id').primaryKey(),

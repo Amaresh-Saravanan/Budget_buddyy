@@ -227,6 +227,47 @@ export const remindersAPI = {
   }
 }
 
+// ==================== INCOME API ====================
+
+export const incomeAPI = {
+  // Get all income entries
+  getAll: async (params = {}, token) => {
+    const queryString = new URLSearchParams(params).toString()
+    const endpoint = queryString ? `/income?${queryString}` : '/income'
+    return apiRequest(endpoint, { method: 'GET' }, token)
+  },
+
+  // Create income entry
+  create: async (income, token) => {
+    return apiRequest('/income', {
+      method: 'POST',
+      body: JSON.stringify(income)
+    }, token)
+  },
+
+  // Update income entry
+  update: async (id, income, token) => {
+    return apiRequest(`/income/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(income)
+    }, token)
+  },
+
+  // Delete income entry
+  delete: async (id, token) => {
+    return apiRequest(`/income/${id}`, { method: 'DELETE' }, token)
+  }
+}
+
+// ==================== SYNC API ====================
+
+export const syncAPI = {
+  // Manually trigger the bank-email sync
+  triggerGmailSync: async (token) => {
+    return apiRequest('/sync/gmail', { method: 'POST' }, token)
+  }
+}
+
 // ==================== HEALTH CHECK ====================
 
 export const healthCheck = async () => {
@@ -244,5 +285,7 @@ export default {
   expenses: expensesAPI,
   savings: savingsAPI,
   reminders: remindersAPI,
+  income: incomeAPI,
+  sync: syncAPI,
   healthCheck
 }

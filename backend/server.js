@@ -2,12 +2,15 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { testConnection } from './config/db.js'
+import { syncBankEmails } from './services/emailSync.js'
 
 // Route imports
 import authRoutes from './routes/authRoutes.js'
 import expenseRoutes from './routes/expenseRoutes.js'
 import savingRoutes from './routes/savingRoutes.js'
 import reminderRoutes from './routes/reminderRoutes.js'
+import incomeRoutes from './routes/incomeRoutes.js'
+import syncRoutes from './routes/syncRoutes.js'
 
 // Load env vars
 dotenv.config()
@@ -51,6 +54,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/expenses', expenseRoutes)
 app.use('/api/savings', savingRoutes)
 app.use('/api/reminders', reminderRoutes)
+app.use('/api/income', incomeRoutes)
+app.use('/api/sync', syncRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -69,6 +74,25 @@ app.use((req, res) => {
     message: 'Route not found' 
   })
 })
+
+// Automatic bank-email sync (runs shortly after startup, then on a fixed interval)
+const EMAIL_SYNC_INTERVAL_MS = (parseInt(process.env.EMAIL_SYNC_INTERVAL_MINUTES || '15', 10)) * 60 * 1000
+
+const runEmailSync = async () => {
+  try {
+    const result = await syncBankEmails()
+    if (result.skipped) {
+      console.log(`⏭  Email sync skipped: ${result.reason}`)
+    } else if (result.synced > 0) {
+      console.log(`📧 Email sync: imported ${result.synced} new transaction(s)`)
+    }
+  } catch (error) {
+    console.error('❌ Email sync error:', error.message)
+  }
+}
+
+setTimeout(runEmailSync, 5000)
+setInterval(runEmailSync, EMAIL_SYNC_INTERVAL_MS)
 
 const PORT = process.env.PORT || 5000
 
@@ -98,6 +122,9 @@ app.listen(PORT, () => {
   - GET    /api/reminders       - Get all reminders
   - POST   /api/reminders       - Create reminder
   - GET    /api/reminders/upcoming - Get upcoming reminders
+  - GET    /api/income           - Get all income entries
+  - POST   /api/income           - Create income entry
+  - POST   /api/sync/gmail       - Manually trigger bank-email sync
   `)
 })
 

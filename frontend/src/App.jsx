@@ -14,7 +14,8 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import SSOCallback from './pages/SSOCallback'
-import { authAPI, expensesAPI, savingsAPI, remindersAPI } from './services/api'
+import Income from './pages/Income'
+import { authAPI, expensesAPI, savingsAPI, remindersAPI, incomeAPI } from './services/api'
 import { LogOut } from 'lucide-react'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -83,9 +84,51 @@ function AppContent() {
   const [expenses, setExpenses] = useState([])
   const [savings, setSavings] = useState([])
   const [reminders, setReminders] = useState([])
+  const [income, setIncome] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const location = useLocation()
+
+  // Fetch expenses, savings, reminders, and income from the database
+  const refetchData = async () => {
+    const token = await getToken()
+
+    try {
+      const expensesRes = await expensesAPI.getAll({}, token)
+      if (expensesRes.success && expensesRes.data) {
+        setExpenses(expensesRes.data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch expenses:', e)
+    }
+
+    try {
+      const savingsRes = await savingsAPI.getAll({}, token)
+      if (savingsRes.success && savingsRes.data) {
+        setSavings(savingsRes.data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch savings:', e)
+    }
+
+    try {
+      const remindersRes = await remindersAPI.getAll({}, token)
+      if (remindersRes.success && remindersRes.data) {
+        setReminders(remindersRes.data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch reminders:', e)
+    }
+
+    try {
+      const incomeRes = await incomeAPI.getAll({}, token)
+      if (incomeRes.success && incomeRes.data) {
+        setIncome(incomeRes.data)
+      }
+    } catch (e) {
+      console.error('Failed to fetch income:', e)
+    }
+  }
 
   // Sync user to database and fetch data when logged in
   useEffect(() => {
@@ -94,7 +137,7 @@ function AppContent() {
         try {
           setIsLoadingData(true)
           const token = await getToken()
-          
+
           // Sync user first
           await authAPI.syncUser({
             clerkId: user.id,
@@ -105,36 +148,7 @@ function AppContent() {
           }, token)
           console.log('User synced to database')
 
-          // Fetch expenses from database
-          try {
-            const expensesRes = await expensesAPI.getAll({}, token)
-            if (expensesRes.success && expensesRes.data) {
-              setExpenses(expensesRes.data)
-            }
-          } catch (e) {
-            console.error('Failed to fetch expenses:', e)
-          }
-
-          // Fetch savings from database
-          try {
-            const savingsRes = await savingsAPI.getAll({}, token)
-            if (savingsRes.success && savingsRes.data) {
-              setSavings(savingsRes.data)
-            }
-          } catch (e) {
-            console.error('Failed to fetch savings:', e)
-          }
-
-          // Fetch reminders from database
-          try {
-            const remindersRes = await remindersAPI.getAll({}, token)
-            if (remindersRes.success && remindersRes.data) {
-              setReminders(remindersRes.data)
-            }
-          } catch (e) {
-            console.error('Failed to fetch reminders:', e)
-          }
-
+          await refetchData()
         } catch (error) {
           console.error('Failed to initialize user data:', error)
         } finally {
@@ -272,6 +286,31 @@ function AppContent() {
     }
   }
 
+  // Income handlers - now save to database
+  const handleAddIncome = async (newIncome) => {
+    try {
+      const token = await getToken()
+      const response = await incomeAPI.create(newIncome, token)
+      if (response.success && response.data) {
+        setIncome([response.data, ...income])
+      }
+    } catch (error) {
+      console.error('Failed to add income:', error)
+      setIncome([{ ...newIncome, id: Date.now() }, ...income])
+    }
+  }
+
+  const handleDeleteIncome = async (id) => {
+    try {
+      const token = await getToken()
+      await incomeAPI.delete(id, token)
+      setIncome(income.filter(inc => inc.id !== id))
+    } catch (error) {
+      console.error('Failed to delete income:', error)
+      setIncome(income.filter(inc => inc.id !== id))
+    }
+  }
+
   // Settings handlers
   const handleClearAllData = () => {
     setExpenses([])
@@ -353,6 +392,16 @@ function AppContent() {
               💸 Expenses
             </Link>
             <Link
+              to="/income"
+              className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                location.pathname === '/income'
+                  ? 'bg-[#00ff88] text-[#0f0f0f] shadow-[0_0_15px_rgba(0,255,136,0.4)]'
+                  : 'text-[#a0a0a0] hover:text-[#00ff88] hover:bg-[#0f0f0f]'
+              }`}
+            >
+              💵 Income
+            </Link>
+            <Link
               to="/savings"
               className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                 location.pathname === '/savings'
@@ -422,15 +471,16 @@ function AppContent() {
           <Route 
             path="/dashboard" 
             element={
-              <Dashboard 
+              <Dashboard
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
+                income={income}
               />
-            } 
+            }
           />
-          <Route 
-            path="/expenses" 
+          <Route
+            path="/expenses"
             element={
               <ExpenseList 
                 expenses={expenses} 
@@ -439,10 +489,21 @@ function AppContent() {
               />
             } 
           />
-          <Route 
-            path="/savings" 
+          <Route
+            path="/income"
             element={
-              <Savings 
+              <Income
+                incomes={income}
+                onAddIncome={handleAddIncome}
+                onDeleteIncome={handleDeleteIncome}
+                onSyncComplete={refetchData}
+              />
+            }
+          />
+          <Route
+            path="/savings"
+            element={
+              <Savings
                 savings={savings}
                 onAddSaving={handleAddSaving}
                 onDeleteSaving={handleDeleteSaving}

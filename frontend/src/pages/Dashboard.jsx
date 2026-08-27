@@ -51,7 +51,7 @@ function getRelativeTime(date) {
   return expDate.toLocaleDateString()
 }
 
-function Dashboard({ expenses, savings, reminders }) {
+function Dashboard({ expenses, savings, reminders, income = [] }) {
   const { user } = useUser()
   const [showScoreDetails, setShowScoreDetails] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
@@ -198,6 +198,16 @@ function Dashboard({ expenses, savings, reminders }) {
     const totalSavings = savings.reduce((sum, sav) => sum + (parseFloat(sav.amount) || 0), 0)
     const totalSavingsTarget = savings.reduce((sum, sav) => sum + (parseFloat(sav.targetAmount) || 0), 0)
 
+    // Income and net balance
+    const thisMonthIncome = income.filter(inc => {
+      const incDate = new Date(inc.date)
+      return incDate.getMonth() === currentMonth && incDate.getFullYear() === currentYear
+    })
+    const monthlyIncome = thisMonthIncome.reduce((sum, inc) => sum + (parseFloat(inc.amount) || 0), 0)
+    const totalIncome = income.reduce((sum, inc) => sum + (parseFloat(inc.amount) || 0), 0)
+    const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0)
+    const netBalance = totalIncome - totalExpensesAmount
+
     // Pending reminders
     const pendingReminders = reminders.filter(rem => !rem.completed).length
 
@@ -218,10 +228,13 @@ function Dashboard({ expenses, savings, reminders }) {
       monthProgress: Math.round(monthProgress * 100),
       totalSavings,
       totalSavingsTarget,
+      monthlyIncome,
+      totalIncome,
+      netBalance,
       pendingReminders,
       totalExpenses: expenses.length
     }
-  }, [expenses, savings, reminders, monthlyBudget, categoryBudgets])
+  }, [expenses, savings, reminders, income, monthlyBudget, categoryBudgets])
 
   const recentExpenses = expenses.slice(0, 5)
   const currency = profile.currency || '₹'
@@ -275,7 +288,19 @@ function Dashboard({ expenses, savings, reminders }) {
       </div>
 
       {/* Summary Cards Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+          <p className="text-[#666] text-xs mb-1">Total Income</p>
+          <p className="text-2xl font-bold text-[#00ff88]">{formatCurrency(stats.totalIncome)}</p>
+          <p className="text-[#666] text-xs">{formatCurrency(stats.monthlyIncome)} this month</p>
+        </div>
+        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+          <p className="text-[#666] text-xs mb-1">Net Balance</p>
+          <p className={`text-2xl font-bold ${stats.netBalance >= 0 ? 'text-[#00ff88]' : 'text-[#ff6b6b]'}`}>
+            {stats.netBalance < 0 ? '-' : ''}{formatCurrency(stats.netBalance)}
+          </p>
+          <p className="text-[#666] text-xs">income − expenses</p>
+        </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
           <p className="text-[#666] text-xs mb-1">Total Expenses</p>
           <p className="text-2xl font-bold text-[#ff6b6b]">{stats.totalExpenses}</p>
