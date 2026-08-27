@@ -1,0 +1,8 @@
+{
+  "appId": "com.budgetbuddy.app",
+  "appName": "BudgetBuddy",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  }
+}

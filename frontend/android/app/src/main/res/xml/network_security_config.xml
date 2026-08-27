@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 9+ blocks cleartext (http://) traffic by default.
+
+  BudgetBuddy is a personal, sideloaded app that normally talks to a backend
+  running on the same LAN (e.g. http://192.168.1.5:5000), so cleartext has to
+  be permitted for it to reach that server at all. LAN addresses are handed
+  out by DHCP and change, so pinning a single IP here is not practical.
+
+  If you later deploy the backend somewhere with a real HTTPS certificate,
+  set cleartextTrafficPermitted to "false" — nothing else needs to change.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

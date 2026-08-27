@@ -3,6 +3,18 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+// Inside the Capacitor webview "localhost" is the app itself, not your dev
+// machine, so a localhost API URL can never reach the backend from a phone.
+// Fail loudly here rather than leaving every request to time out silently.
+const isNativeApp = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()
+if (isNativeApp && /localhost|127\.0\.0\.1/.test(API_BASE_URL)) {
+  console.error(
+    `[BudgetBuddy] VITE_API_URL is "${API_BASE_URL}", which points at the phone itself. ` +
+    `Rebuild with VITE_API_URL set to your machine's LAN IP (e.g. http://192.168.1.5:5000/api) ` +
+    `or a deployed backend URL, then run: npm run cap:sync`
+  )
+}
+
 // Helper to get auth token from Clerk
 const getAuthToken = async () => {
   // This will be called from components that have access to Clerk's useAuth

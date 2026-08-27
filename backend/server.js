@@ -26,6 +26,9 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
+    // Capacitor mobile app: the webview serves the bundle from these origins
+    'https://localhost',
+    'capacitor://localhost',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true

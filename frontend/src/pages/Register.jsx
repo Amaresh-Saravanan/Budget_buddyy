@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSignUp } from '@clerk/clerk-react'
 import { Eye, EyeOff, Check, X, Wallet } from 'lucide-react'
+import { supportsOAuthSignIn } from '../utils/platform'
 
 export default function Register() {
   const { isLoaded, signUp, setActive } = useSignUp()
@@ -147,7 +148,9 @@ export default function Register() {
             Sign up and unlock a world of possibilities. Your adventure begins here.
           </p>
 
-          {/* OAuth Buttons */}
+          {/* OAuth Buttons - hidden in the native app, where Google rejects
+              sign-in from an embedded webview */}
+          {supportsOAuthSignIn() && (
           <div className="space-y-3 mb-6">
             <button
               onClick={() => handleOAuthSignUp('oauth_google')}
@@ -172,13 +175,16 @@ export default function Register() {
               Continue with Meta
             </button>
           </div>
+          )}
 
           {/* Divider */}
+          {supportsOAuthSignIn() && (
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 h-px bg-[#e5e7eb]"></div>
             <span className="text-[#9ca3af] text-sm">or</span>
             <div className="flex-1 h-px bg-[#e5e7eb]"></div>
           </div>
+          )}
 
           {/* Error Message */}
           {error && (
