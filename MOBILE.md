@@ -4,6 +4,33 @@ The mobile app is the existing React frontend wrapped with [Capacitor](https://c
 There is no second codebase — the same `frontend/src` builds both the website and the app,
 so any feature you add shows up in both.
 
+## Just want to see it on your phone right now?
+
+You don't need Android Studio for this. Run the app on your network and open it in
+your phone's browser — it's the same code the native app runs, so everything except
+the app icon behaves identically.
+
+```bash
+# terminal 1 — backend
+cd backend && npm run dev
+
+# terminal 2 — frontend, exposed to your network
+cd frontend && npm run dev:mobile
+```
+
+`dev:mobile` prints a **Network:** URL like `http://192.168.1.5:5173`. Put that IP in
+`frontend/.env.local` first so the app knows where the backend is:
+
+```env
+VITE_API_URL=http://192.168.1.5:5000/api    # same IP, port 5000
+```
+
+Restart `dev:mobile` after editing that file, then open the Network URL on your phone
+(same Wi-Fi). That's the full app — income page, bank sync, everything.
+
+Build the actual APK when you want it on your home screen and running without your
+laptop on. Steps below.
+
 ## What you need
 
 - **Android Studio** (includes the Android SDK) — https://developer.android.com/studio

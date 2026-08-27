@@ -21,16 +21,32 @@ testConnection()
 const app = express()
 
 // CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  // Capacitor mobile app: the webview serves the bundle from these origins
+  'https://localhost',
+  'capacitor://localhost',
+  process.env.FRONTEND_URL
+].filter(Boolean)
+
+// In development, also accept private-LAN origins so you can open the app on a
+// phone on the same Wi-Fi (e.g. http://192.168.1.5:5173) without hardcoding an
+// IP that changes with DHCP. Never enabled in production.
+const PRIVATE_LAN_ORIGIN = /^https?:\/\/(?:192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(?::\d+)?$/
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    // Capacitor mobile app: the webview serves the bundle from these origins
-    'https://localhost',
-    'capacitor://localhost',
-    process.env.FRONTEND_URL
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Requests with no Origin header (curl, native HTTP clients) are not
+    // subject to the browser same-origin policy, so there's nothing to block.
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    if (process.env.NODE_ENV !== 'production' && PRIVATE_LAN_ORIGIN.test(origin)) {
+      return callback(null, true)
+    }
+    return callback(new Error(`Not allowed by CORS: ${origin}`))
+  },
   credentials: true
 }))
 
