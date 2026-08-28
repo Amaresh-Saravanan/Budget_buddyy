@@ -1,10 +1,11 @@
 import express from 'express'
-import { 
-  syncUser, 
-  getMe, 
-  updateSettings, 
+import {
+  syncUser,
+  getMe,
+  updateSettings,
   updateGamification,
-  handleWebhook 
+  deleteAccount,
+  handleWebhook
 } from '../controllers/authController.js'
 import { requireAuth, verifyWebhook } from '../middleware/authMiddleware.js'
 
@@ -16,6 +17,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), verifyWebhook
 // Protected routes
 router.post('/sync', requireAuth, syncUser)
 router.get('/me', requireAuth, getMe)
+router.delete('/me', requireAuth, deleteAccount)
 router.put('/settings', requireAuth, updateSettings)
 router.put('/gamification', requireAuth, updateGamification)
 

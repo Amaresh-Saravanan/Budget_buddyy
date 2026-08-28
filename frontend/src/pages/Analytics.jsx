@@ -1,47 +1,13 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { CATEGORY_META as CATEGORY_CONFIG, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
+import { DEFAULT_SETTINGS } from '../constants/settings'
 
-function Analytics({ expenses, savings }) {
+function Analytics({ expenses, savings, income = [], settings = DEFAULT_SETTINGS }) {
   const [activeTab, setActiveTab] = useState('spending')
-  
-  // Load settings from localStorage
-  const [monthlyBudget, setMonthlyBudget] = useState(25000)
-  const [categoryBudgets, setCategoryBudgets] = useState(DEFAULT_CATEGORY_BUDGETS)
-  const [currency, setCurrency] = useState('₹')
 
-  useEffect(() => {
-    const loadFromStorage = (key, defaultValue) => {
-      try {
-        const stored = localStorage.getItem(key)
-        return stored ? JSON.parse(stored) : defaultValue
-      } catch {
-        return defaultValue
-      }
-    }
-
-    const budget = loadFromStorage('budgetbuddy_monthlyBudget', 25000)
-    const catBudgets = loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS)
-    const profile = loadFromStorage('budgetbuddy_profile', { currency: '₹' })
-    
-    setMonthlyBudget(budget)
-    setCategoryBudgets(catBudgets)
-    setCurrency(profile.currency || '₹')
-
-    // Listen for updates
-    const handleFocus = () => {
-      setMonthlyBudget(loadFromStorage('budgetbuddy_monthlyBudget', 25000))
-      setCategoryBudgets(loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS))
-      const prof = loadFromStorage('budgetbuddy_profile', { currency: '₹' })
-      setCurrency(prof.currency || '₹')
-    }
-
-    window.addEventListener('focus', handleFocus)
-    window.addEventListener('storage', handleFocus)
-    return () => {
-      window.removeEventListener('focus', handleFocus)
-      window.removeEventListener('storage', handleFocus)
-    }
-  }, [])
+  const monthlyBudget = settings.monthlyBudget ?? DEFAULT_SETTINGS.monthlyBudget
+  const categoryBudgets = settings.categoryBudgets || DEFAULT_CATEGORY_BUDGETS
+  const currency = settings.currency || '₹'
 
   // Format currency based on symbol
   const formatCurrency = (amount) => {
@@ -166,6 +132,18 @@ function Analytics({ expenses, savings }) {
     const totalSaved = savings.reduce((sum, sav) => sum + parseFloat(sav.amount), 0)
     const savingsRate = stats.monthlyBudget > 0 ? (totalSaved / stats.monthlyBudget) * 100 : 0
 
+    // Earned vs spent this month. The savings rate above measures deposits
+    // against a budget you set; this one measures what actually stayed put
+    // against what actually came in, which is the figure that matters.
+    const monthlyIncome = income
+      .filter((inc) => {
+        const d = new Date(inc.date)
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+      })
+      .reduce((sum, inc) => sum + (parseFloat(inc.amount) || 0), 0)
+    const monthlyNet = monthlyIncome - stats.monthlyTotal
+    const netSavingsRate = monthlyIncome > 0 ? (monthlyNet / monthlyIncome) * 100 : null
+
     // Budget efficiency
     const budgetEfficiency = stats.monthlyBudget > 0 
       ? Math.max(0, 100 - ((stats.monthlyTotal / stats.monthlyBudget) * 100))
@@ -189,12 +167,15 @@ function Analytics({ expenses, savings }) {
       avgTransactionAmount,
       totalSaved,
       savingsRate,
+      monthlyIncome,
+      monthlyNet,
+      netSavingsRate,
       budgetEfficiency,
       predictedTotal,
       predictedOverUnder,
       daysElapsed
     }
-  }, [expenses, savings, stats])
+  }, [expenses, savings, income, stats])
 
   // Generate insights
   const insights = useMemo(() => {
@@ -349,6 +330,50 @@ function Analytics({ expenses, savings }) {
         {/* Spending Tab */}
         {activeTab === 'spending' && (
           <div className="space-y-6 animate-fadeIn">
+            {/* Earned vs spent — only meaningful once income exists */}
+            {analytics.monthlyIncome > 0 && (
+              <div className="bg-gradient-to-r from-[#00ff88]/10 to-[#0f0f0f] border border-[#333] rounded-xl p-5">
+                <h4 className="text-[#a0a0a0] text-sm mb-4 font-medium">💵 Earned vs Spent This Month</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <p className="text-[#666] text-xs mb-1">Earned</p>
+                    <p className="text-2xl font-bold text-[#00ff88]">{formatCurrency(analytics.monthlyIncome)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#666] text-xs mb-1">Spent</p>
+                    <p className="text-2xl font-bold text-[#ff6b6b]">{formatCurrency(stats.monthlyTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[#666] text-xs mb-1">Kept</p>
+                    <p className={`text-2xl font-bold ${analytics.monthlyNet >= 0 ? 'text-[#00ff88]' : 'text-[#ff6b6b]'}`}>
+                      {analytics.monthlyNet < 0 ? '-' : ''}{formatCurrency(Math.abs(analytics.monthlyNet))}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Proportion of income spent */}
+                <div className="h-3 bg-[#1a1a1a] rounded-full overflow-hidden mb-2">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (stats.monthlyTotal / analytics.monthlyIncome) * 100)}%`,
+                      backgroundColor: analytics.monthlyNet >= 0 ? '#4ecdc4' : '#ff6b6b'
+                    }}
+                  />
+                </div>
+                {analytics.netSavingsRate !== null && (
+                  <p className="text-sm text-[#a0a0a0]">
+                    You kept{' '}
+                    <span className={analytics.netSavingsRate >= 0 ? 'text-[#00ff88]' : 'text-[#ff6b6b]'}>
+                      {analytics.netSavingsRate.toFixed(0)}%
+                    </span>{' '}
+                    of what you earned this month
+                    {analytics.netSavingsRate < 0 && ' — you spent more than came in'}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Key Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-[#0f0f0f] rounded-lg p-4">

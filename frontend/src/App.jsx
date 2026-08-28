@@ -14,9 +14,17 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import SSOCallback from './pages/SSOCallback'
+import ForgotPassword from './pages/ForgotPassword'
 import Income from './pages/Income'
 import Toast from './components/Toast'
 import { authAPI, expensesAPI, savingsAPI, remindersAPI, incomeAPI } from './services/api'
+import {
+  DEFAULT_SETTINGS,
+  readCachedSettings,
+  writeCachedSettings,
+  clearCachedSettings,
+  mergeSettings
+} from './constants/settings'
 import { LogOut } from 'lucide-react'
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -89,13 +97,51 @@ function AppContent() {
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [toast, setToast] = useState(null)
+  // Settings live here, fetched from the server, so every page reads the same
+  // values. Seeded from cache purely so the first paint isn't the default
+  // budget flashing before the real one loads.
+  const [settings, setSettings] = useState(readCachedSettings)
   const location = useLocation()
 
   const showToast = (message, type = 'error') => setToast({ message, type })
 
-  // Fetch expenses, savings, reminders, and income from the database
+  // Persists a partial settings change, then adopts what the server returns.
+  const handleUpdateSettings = async (patch) => {
+    const previous = settings
+    const optimistic = mergeSettings(settings, patch)
+    setSettings(optimistic)
+
+    try {
+      const token = await getToken()
+      const response = await authAPI.updateSettings(patch, token)
+      const saved = response?.success && response.data
+        ? mergeSettings(DEFAULT_SETTINGS, response.data)
+        : optimistic
+      setSettings(saved)
+      writeCachedSettings(saved)
+      return saved
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      setSettings(previous)
+      showToast('Could not save settings. Check your connection and try again.')
+      throw error
+    }
+  }
+
+  // Fetch settings and all records from the database
   const refetchData = async () => {
     const token = await getToken()
+
+    try {
+      const me = await authAPI.getMe(token)
+      if (me.success && me.data) {
+        const serverSettings = mergeSettings(DEFAULT_SETTINGS, me.data.settings)
+        setSettings(serverSettings)
+        writeCachedSettings(serverSettings)
+      }
+    } catch (e) {
+      console.error('Failed to fetch settings:', e)
+    }
 
     try {
       const expensesRes = await expensesAPI.getAll({}, token)
@@ -382,11 +428,6 @@ function AppContent() {
     }
   }
 
-  const handleUpdateBudgets = (categoryBudgets, monthlyBudget) => {
-    // Store budgets in localStorage (already handled in Settings)
-    console.log('Budgets updated:', categoryBudgets, monthlyBudget)
-  }
-
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#e0e0e0]">
       {toast && (
@@ -540,6 +581,7 @@ function AppContent() {
                 savings={savings}
                 reminders={reminders}
                 income={income}
+                settings={settings}
               />
             }
           />
@@ -590,44 +632,49 @@ function AppContent() {
           <Route 
             path="/calendar" 
             element={
-              <Calendar 
+              <Calendar
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
+                settings={settings}
               />
-            } 
+            }
           />
           <Route 
             path="/analytics" 
             element={
-              <Analytics 
+              <Analytics
                 expenses={expenses}
                 savings={savings}
+                income={income}
+                settings={settings}
               />
-            } 
+            }
           />
-          <Route 
-            path="/settings" 
+          <Route
+            path="/settings"
             element={
-              <Settings 
+              <Settings
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
+                settings={settings}
+                onUpdateSettings={handleUpdateSettings}
                 onClearAllData={handleClearAllData}
                 onImportExpenses={handleImportExpenses}
-                onUpdateBudgets={handleUpdateBudgets}
               />
-            } 
+            }
           />
-          <Route 
-            path="/gamification" 
+          <Route
+            path="/gamification"
             element={
-              <Gamification 
+              <Gamification
                 expenses={expenses}
                 savings={savings}
                 reminders={reminders}
+                settings={settings}
               />
-            } 
+            }
           />
         </Routes>
       </main>
@@ -651,6 +698,7 @@ function App() {
           <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/sso-callback" element={<SSOCallback />} />
           
           {/* Protected Routes - Main App */}

@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Edit2, TrendingDown, TrendingUp } from 'lucide-react';
 import { CATEGORY_ICONS as categoryIcons } from '../constants/categories';
+import { DEFAULT_SETTINGS } from '../constants/settings';
 
-const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
+const Calendar = ({ expenses = [], savings = [], reminders = [], settings = DEFAULT_SETTINGS }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showComparison, setShowComparison] = useState(false);
-  const [dailyAllowance, setDailyAllowance] = useState(500);
 
-  // Load daily allowance from settings
-  useEffect(() => {
-    try {
-      const monthlyBudget = localStorage.getItem('budgetbuddy_monthlyBudget');
-      if (monthlyBudget) {
-        const budget = JSON.parse(monthlyBudget);
-        setDailyAllowance(Math.round(budget / 30));
-      }
-    } catch (e) {
-      console.log('Using default daily allowance');
-    }
-  }, []);
+  const monthlyBudget = settings.monthlyBudget ?? DEFAULT_SETTINGS.monthlyBudget;
+  const dailyAllowance = Math.round(monthlyBudget / 30);
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];

@@ -79,6 +79,12 @@ export const authAPI = {
     }, token)
   },
 
+  // Delete the account's data. The Clerk identity is deleted separately,
+  // client-side, after this succeeds.
+  deleteAccount: async (token) => {
+    return apiRequest('/auth/me', { method: 'DELETE' }, token)
+  },
+
   // Update gamification stats
   updateGamification: async (data, token) => {
     return apiRequest('/auth/gamification', {

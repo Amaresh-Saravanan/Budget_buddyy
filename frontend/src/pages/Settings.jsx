@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useUser, useAuth } from '@clerk/clerk-react'
+import { useUser, useAuth, useClerk } from '@clerk/clerk-react'
 import { authAPI } from '../services/api'
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_BUDGETS as DEFAULT_BUDGETS } from '../constants/categories'
+import { DEFAULT_SETTINGS, clearCachedSettings } from '../constants/settings'
 import Toast from '../components/Toast'
 import EmailSyncSetup from '../components/EmailSyncSetup'
 
@@ -12,25 +13,27 @@ const CURRENCY_NAMES = {
   '£': 'British Pound'
 }
 
-function Settings({ 
-  expenses = [], 
-  savings = [], 
+function Settings({
+  expenses = [],
+  savings = [],
   reminders = [],
+  settings = DEFAULT_SETTINGS,
+  onUpdateSettings,
   onClearAllData,
-  onImportExpenses,
-  onUpdateBudgets,
-  categoryBudgets: propCategoryBudgets
+  onImportExpenses
 }) {
   const { user } = useUser()
   const { getToken } = useAuth()
+  const { openUserProfile } = useClerk()
   const [activeTab, setActiveTab] = useState('profile')
   const [toast, setToast] = useState(null)
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true)
-  const [dbSettings, setDbSettings] = useState(null)
   const fileInputRef = useRef(null)
-  
-  // Load settings from localStorage on mount
-  const loadFromStorage = (key, defaultValue) => {
+
+  // Local-only display preferences. These are cosmetic and per-device by
+  // design (theme follows the screen you're on), so they stay in
+  // localStorage rather than syncing — unlike budgets and currency, which
+  // are your data and now live on the server.
+  const loadLocalPref = (key, defaultValue) => {
     try {
       const saved = localStorage.getItem(key)
       return saved ? JSON.parse(saved) : defaultValue
@@ -39,98 +42,41 @@ function Settings({
     }
   }
 
-  // Fetch user settings from backend on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const token = await getToken()
-        if (token) {
-          const response = await authAPI.getMe(token)
-          if (response.success && response.data) {
-            setDbSettings(response.data.settings)
-            // Update local state with database settings
-            if (response.data.settings) {
-              const settings = response.data.settings
-              setMonthlyBudget(settings.monthlyBudget || 25000)
-              setCategoryBudgets(settings.categoryBudgets || DEFAULT_BUDGETS)
-              setNotifications(prev => ({
-                ...prev,
-                ...settings.notifications
-              }))
-              setProfile(prev => ({
-                ...prev,
-                currency: settings.currency || '₹'
-              }))
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch settings:', error)
-      } finally {
-        setIsLoadingSettings(false)
-      }
-    }
-    fetchSettings()
-  }, [getToken])
+  // Identity comes from Clerk; currency comes from server settings.
+  const profile = {
+    name: user?.fullName || user?.firstName || 'User',
+    email: user?.primaryEmailAddress?.emailAddress || '',
+    imageUrl: user?.imageUrl,
+    currency: settings.currency || '₹'
+  }
 
-  // Profile state - use Clerk user data
-  const [profile, setProfile] = useState(() => ({
-    name: user?.fullName || user?.firstName || loadFromStorage('budgetbuddy_profile', { name: 'User' }).name,
-    email: user?.primaryEmailAddress?.emailAddress || loadFromStorage('budgetbuddy_profile', { email: '' }).email,
-    phone: loadFromStorage('budgetbuddy_profile', { phone: '' }).phone || '+91 98765 43210',
-    currency: loadFromStorage('budgetbuddy_profile', { currency: '₹' }).currency,
-    monthStartDay: loadFromStorage('budgetbuddy_profile', { monthStartDay: 1 }).monthStartDay,
-    imageUrl: user?.imageUrl
-  }))
-  
-  // Update profile when Clerk user changes
-  useEffect(() => {
-    if (user) {
-      setProfile(prev => ({
-        ...prev,
-        name: user.fullName || user.firstName || prev.name,
-        email: user.primaryEmailAddress?.emailAddress || prev.email,
-        imageUrl: user.imageUrl
-      }))
-    }
-  }, [user])
-  const [originalProfile, setOriginalProfile] = useState(profile)
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  
-  // Password state
-  const [showChangePassword, setShowChangePassword] = useState(false)
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
-  const [passwordError, setPasswordError] = useState('')
-  
   // Delete account state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Budget state
-  const [monthlyBudget, setMonthlyBudget] = useState(() => loadFromStorage('budgetbuddy_monthlyBudget', 25000))
-  const [categoryBudgets, setCategoryBudgets] = useState(() => 
-    propCategoryBudgets || loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_BUDGETS)
-  )
+  // Budget draft — edited locally, saved to the server on "Save Changes".
+  const [monthlyBudget, setMonthlyBudget] = useState(settings.monthlyBudget)
+  const [categoryBudgets, setCategoryBudgets] = useState(settings.categoryBudgets)
   const [hasChanges, setHasChanges] = useState(false)
 
-  // Preferences state
-  const [preferences, setPreferences] = useState(() => loadFromStorage('budgetbuddy_preferences', {
+  // Adopt server settings whenever they change, unless the user is
+  // mid-edit — overwriting a draft they haven't saved would lose their work.
+  useEffect(() => {
+    if (hasChanges) return
+    setMonthlyBudget(settings.monthlyBudget)
+    setCategoryBudgets(settings.categoryBudgets)
+  }, [settings.monthlyBudget, settings.categoryBudgets, hasChanges])
+
+  const notifications = settings.notifications || DEFAULT_SETTINGS.notifications
+
+  const [preferences, setPreferences] = useState(() => loadLocalPref('budgetbuddy_preferences', {
     theme: 'dark',
     language: 'en',
     dateFormat: 'dd/mm/yyyy'
   }))
 
-  // Notifications state
-  const [notifications, setNotifications] = useState(() => loadFromStorage('budgetbuddy_notifications', {
-    budgetAlerts: true,
-    dailySummary: true,
-    reminderNotifications: true,
-    weeklyReport: false,
-    savingsMilestones: true
-  }))
-
-  // Alert thresholds state
-  const [alertThresholds, setAlertThresholds] = useState(() => loadFromStorage('budgetbuddy_alertThresholds', {
+  const [alertThresholds, setAlertThresholds] = useState(() => loadLocalPref('budgetbuddy_alertThresholds', {
     warning: 75,
     critical: 90
   }))
@@ -150,8 +96,8 @@ function Settings({
     setToast({ message, type })
   }
 
-  // Save to localStorage helper
-  const saveToStorage = (key, value) => {
+  // Save a local-only display preference (theme, language, date format).
+  const saveLocalPref = (key, value) => {
     try {
       localStorage.setItem(key, JSON.stringify(value))
       return true
@@ -173,145 +119,64 @@ function Settings({
   // Reset budgets
   const handleReset = () => {
     setCategoryBudgets(DEFAULT_BUDGETS)
-    setMonthlyBudget(25000)
+    setMonthlyBudget(DEFAULT_SETTINGS.monthlyBudget)
     setHasChanges(true)
-    showToast('Budget reset to defaults', 'info')
+    showToast('Budget reset to defaults — press Save to keep it', 'info')
   }
 
   // Save budgets
   const handleSaveBudgets = async () => {
     try {
-      const token = await getToken()
-      if (token) {
-        await authAPI.updateSettings({
-          monthlyBudget,
-          categoryBudgets,
-          currency: profile.currency
-        }, token)
-      }
-      saveToStorage('budgetbuddy_categoryBudgets', categoryBudgets)
-      saveToStorage('budgetbuddy_monthlyBudget', monthlyBudget)
-      if (onUpdateBudgets) {
-        onUpdateBudgets(categoryBudgets, monthlyBudget)
-      }
+      await onUpdateSettings({ monthlyBudget, categoryBudgets })
       setHasChanges(false)
-      showToast('Budget settings saved to cloud!', 'success')
-    } catch (error) {
-      console.error('Failed to save budgets:', error)
-      showToast('Failed to save. Try again.', 'error')
+      showToast('Budget saved', 'success')
+    } catch {
+      // App.jsx already surfaced the error and rolled the change back.
     }
   }
 
-  // Profile handlers
-  const handleProfileEdit = () => {
-    setOriginalProfile(profile)
-    setIsEditingProfile(true)
-  }
-
-  const handleProfileSave = async () => {
-    // Validate
-    if (!profile.name.trim()) {
-      showToast('Name cannot be empty', 'error')
-      return
-    }
-    if (!profile.email.includes('@')) {
-      showToast('Please enter a valid email', 'error')
-      return
-    }
-
+  const handleCurrencyChange = async (currency) => {
     try {
-      const token = await getToken()
-      if (token) {
-        await authAPI.updateSettings({
-          currency: profile.currency
-        }, token)
-      }
-      saveToStorage('budgetbuddy_profile', profile)
-      setIsEditingProfile(false)
-      showToast('Profile updated successfully!', 'success')
-    } catch (error) {
-      console.error('Failed to save profile:', error)
-      showToast('Failed to save. Try again.', 'error')
+      await onUpdateSettings({ currency })
+      showToast('Currency updated', 'success')
+    } catch {
+      // Handled upstream.
     }
   }
 
-  const handleProfileCancel = () => {
-    setProfile(originalProfile)
-    setIsEditingProfile(false)
-  }
-
-  // Password handlers
-  const handlePasswordUpdate = () => {
-    setPasswordError('')
-    
-    // Validate
-    if (!passwords.current) {
-      setPasswordError('Please enter current password')
-      return
-    }
-    if (passwords.new.length < 6) {
-      setPasswordError('New password must be at least 6 characters')
-      return
-    }
-    if (passwords.new !== passwords.confirm) {
-      setPasswordError('Passwords do not match')
-      return
-    }
-
-    // Simulate password update (in real app, call API)
-    const savedPassword = localStorage.getItem('budgetbuddy_password') || 'password123'
-    if (passwords.current !== savedPassword) {
-      setPasswordError('Current password is incorrect')
-      return
-    }
-
-    localStorage.setItem('budgetbuddy_password', passwords.new)
-    setPasswords({ current: '', new: '', confirm: '' })
-    setShowChangePassword(false)
-    showToast('Password updated successfully!', 'success')
-  }
-
-  // Delete account handler
-  const handleDeleteAccount = () => {
+  // Delete account: remove the user's records first, while the session is
+  // still valid, then delete the Clerk identity. Doing it the other way
+  // round would invalidate the token and strand the data.
+  const handleDeleteAccount = async () => {
     if (deleteConfirmText !== 'DELETE') {
       showToast('Please type DELETE to confirm', 'error')
       return
     }
 
-    // Clear all data
-    localStorage.removeItem('budgetbuddy_profile')
-    localStorage.removeItem('budgetbuddy_categoryBudgets')
-    localStorage.removeItem('budgetbuddy_monthlyBudget')
-    localStorage.removeItem('budgetbuddy_preferences')
-    localStorage.removeItem('budgetbuddy_notifications')
-    localStorage.removeItem('budgetbuddy_alertThresholds')
-    localStorage.removeItem('budgetbuddy_password')
-
-    if (onClearAllData) {
-      onClearAllData()
+    setIsDeleting(true)
+    try {
+      const token = await getToken()
+      await authAPI.deleteAccount(token)
+      clearCachedSettings()
+      await user.delete()
+      // Deleting the Clerk user ends the session, so the app returns to the
+      // signed-out landing page on its own.
+    } catch (error) {
+      console.error('Failed to delete account:', error)
+      showToast(
+        error?.errors?.[0]?.message || 'Could not delete your account. Check your connection and try again.',
+        'error'
+      )
+      setIsDeleting(false)
     }
-
-    // Reset to defaults
-    setProfile({
-      name: 'User',
-      email: 'user@email.com',
-      phone: '',
-      currency: '₹',
-      monthStartDay: 1
-    })
-    setCategoryBudgets(DEFAULT_BUDGETS)
-    setMonthlyBudget(25000)
-    setShowDeleteConfirm(false)
-    setDeleteConfirmText('')
-    showToast('Account deleted. All data cleared.', 'warning')
   }
 
   // Preferences handlers
   const handlePreferenceChange = (key, value) => {
     const newPrefs = { ...preferences, [key]: value }
     setPreferences(newPrefs)
-    saveToStorage('budgetbuddy_preferences', newPrefs)
-    
+    saveLocalPref('budgetbuddy_preferences', newPrefs)
+
     // Apply theme immediately
     if (key === 'theme') {
       document.documentElement.setAttribute('data-theme', value)
@@ -321,38 +186,29 @@ function Settings({
     }
   }
 
-  // Notification handlers
+  // Notification handlers — these are account settings, so they go to the server.
   const handleNotificationToggle = async (key) => {
-    const newNotifications = { ...notifications, [key]: !notifications[key] }
-    setNotifications(newNotifications)
-    saveToStorage('budgetbuddy_notifications', newNotifications)
-    
+    const wasEnabled = notifications[key]
     try {
-      const token = await getToken()
-      if (token) {
-        await authAPI.updateSettings({
-          notifications: newNotifications
-        }, token)
-      }
-    } catch (error) {
-      console.error('Failed to save notification setting:', error)
+      await onUpdateSettings({ notifications: { ...notifications, [key]: !wasEnabled } })
+      showToast(`${wasEnabled ? 'Disabled' : 'Enabled'} ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`, 'info')
+    } catch {
+      // Handled upstream.
     }
-    
-    showToast(`${notifications[key] ? 'Disabled' : 'Enabled'} ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`, 'info')
   }
 
   // Alert threshold handlers
   const handleWarningThreshold = (value) => {
     const newThresholds = { ...alertThresholds, warning: value }
     setAlertThresholds(newThresholds)
-    saveToStorage('budgetbuddy_alertThresholds', newThresholds)
+    saveLocalPref('budgetbuddy_alertThresholds', newThresholds)
     showToast(`Warning threshold set to ${value}%`, 'info')
   }
 
   const handleCriticalThreshold = (value) => {
     const newThresholds = { ...alertThresholds, critical: value }
     setAlertThresholds(newThresholds)
-    saveToStorage('budgetbuddy_alertThresholds', newThresholds)
+    saveLocalPref('budgetbuddy_alertThresholds', newThresholds)
     showToast(`Critical threshold set to ${value}%`, 'info')
   }
 
@@ -519,14 +375,12 @@ function Settings({
               <h3 className="text-xl font-semibold text-[#e0e0e0] flex items-center gap-2">
                 👤 Profile
               </h3>
-              {!isEditingProfile && (
-                <button
-                  onClick={handleProfileEdit}
-                  className="px-4 py-2 bg-[#bb86fc] text-white rounded-lg text-sm font-medium hover:bg-[#a370e6] transition-all"
-                >
-                  Edit Profile
-                </button>
-              )}
+              <button
+                onClick={() => openUserProfile()}
+                className="px-4 py-2 bg-[#bb86fc] text-white rounded-lg text-sm font-medium hover:bg-[#a370e6] transition-all"
+              >
+                Edit Profile
+              </button>
             </div>
 
             {/* Avatar */}
@@ -555,61 +409,31 @@ function Settings({
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[#666] text-sm mb-1 block">Full Name {user && <span className="text-[#bb86fc]">(from Google)</span>}</label>
+                  <label className="text-[#666] text-sm mb-1 block">
+                    Full Name <span className="text-[#666]">(from your sign-in)</span>
+                  </label>
                   <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.name}</p>
                 </div>
                 <div>
-                  <label className="text-[#666] text-sm mb-1 block">Email {user && <span className="text-[#bb86fc]">(from Google)</span>}</label>
+                  <label className="text-[#666] text-sm mb-1 block">
+                    Email <span className="text-[#666]">(from your sign-in)</span>
+                  </label>
                   <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.email}</p>
                 </div>
-                <div>
-                  <label className="text-[#666] text-sm mb-1 block">Phone</label>
-                  {isEditingProfile ? (
-                    <input
-                      type="tel"
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                      className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none transition-all"
-                    />
-                  ) : (
-                    <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.phone || 'Not set'}</p>
-                  )}
-                </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="text-[#666] text-sm mb-1 block">Currency</label>
-                  {isEditingProfile ? (
-                    <select
-                      value={profile.currency}
-                      onChange={(e) => setProfile({ ...profile, currency: e.target.value })}
-                      className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none transition-all"
-                    >
-                      <option value="₹">₹ Indian Rupee</option>
-                      <option value="$">$ US Dollar</option>
-                      <option value="€">€ Euro</option>
-                      <option value="£">£ British Pound</option>
-                    </select>
-                  ) : (
-                    <p className="text-[#e0e0e0] bg-[#0f0f0f] rounded-lg px-4 py-3">{profile.currency} {CURRENCY_NAMES[profile.currency]}</p>
-                  )}
+                  <select
+                    value={profile.currency}
+                    onChange={(e) => handleCurrencyChange(e.target.value)}
+                    className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none transition-all"
+                  >
+                    {Object.entries(CURRENCY_NAMES).map(([symbol, name]) => (
+                      <option key={symbol} value={symbol}>{symbol} {name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[#666] text-xs mt-1">Saved to your account — applies on every device.</p>
                 </div>
               </div>
-
-              {isEditingProfile && (
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={handleProfileSave}
-                    className="px-6 py-2 bg-[#00ff88] text-[#0f0f0f] rounded-lg font-medium hover:bg-[#00e67a] transition-all"
-                  >
-                    Save Changes
-                  </button>
-                  <button
-                    onClick={handleProfileCancel}
-                    className="px-6 py-2 bg-[#333] text-[#e0e0e0] rounded-lg font-medium hover:bg-[#444] transition-all"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
@@ -620,60 +444,19 @@ function Settings({
             </h3>
             
             <div className="space-y-3">
+              {/* Password, email and connected sign-in methods are managed by
+                  Clerk, which owns authentication. Opening its account UI is
+                  the honest option — a password form here could only pretend. */}
               <button
-                onClick={() => setShowChangePassword(!showChangePassword)}
+                onClick={() => openUserProfile()}
                 className="w-full flex items-center justify-between bg-[#0f0f0f] rounded-lg px-4 py-3 hover:bg-[#1a1a1a] transition-all"
               >
-                <span className="text-[#e0e0e0]">Change Password</span>
-                <span className="text-[#666]">{showChangePassword ? '▼' : '→'}</span>
-              </button>
-
-              {showChangePassword && (
-                <div className="bg-[#0f0f0f] rounded-lg p-4 space-y-3 animate-fadeIn">
-                  <input
-                    type="password"
-                    placeholder="Current Password"
-                    value={passwords.current}
-                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
-                  />
-                  <input
-                    type="password"
-                    placeholder="New Password (min 6 characters)"
-                    value={passwords.new}
-                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirm New Password"
-                    value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
-                  />
-                  {passwordError && (
-                    <p className="text-[#ff6b6b] text-sm">{passwordError}</p>
-                  )}
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={handlePasswordUpdate}
-                      className="px-6 py-2 bg-[#bb86fc] text-white rounded-lg font-medium hover:bg-[#a370e6] transition-all"
-                    >
-                      Update Password
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setShowChangePassword(false)
-                        setPasswords({ current: '', new: '', confirm: '' })
-                        setPasswordError('')
-                      }}
-                      className="px-6 py-2 bg-[#333] text-[#e0e0e0] rounded-lg font-medium hover:bg-[#444] transition-all"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div className="text-left">
+                  <span className="text-[#e0e0e0] block">Password &amp; sign-in</span>
+                  <span className="text-[#666] text-sm">Change your password or connected accounts</span>
                 </div>
-              )}
+                <span className="text-[#666]">→</span>
+              </button>
 
               <button
                 onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
@@ -685,33 +468,39 @@ function Settings({
 
               {showDeleteConfirm && (
                 <div className="bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-lg p-4 animate-fadeIn">
-                  <p className="text-[#ff6b6b] mb-4">⚠️ This will permanently delete all your data. This action cannot be undone.</p>
+                  <p className="text-[#ff6b6b] mb-2">⚠️ This permanently deletes your account and everything in it.</p>
+                  <p className="text-[#a0a0a0] text-sm mb-4">
+                    Every expense, income entry, saving, reminder and your bank-email connection
+                    will be erased, and your sign-in will be removed. This cannot be undone.
+                  </p>
                   <p className="text-[#a0a0a0] text-sm mb-3">Type <span className="text-[#ff6b6b] font-bold">DELETE</span> to confirm:</p>
                   <input
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
                     placeholder="Type DELETE"
-                    className="w-full bg-[#1a1a1a] border border-[#ff6b6b]/50 rounded-lg px-4 py-2 text-[#e0e0e0] focus:outline-none mb-4"
+                    disabled={isDeleting}
+                    className="w-full bg-[#1a1a1a] border border-[#ff6b6b]/50 rounded-lg px-4 py-2 text-[#e0e0e0] focus:outline-none mb-4 disabled:opacity-50"
                   />
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={handleDeleteAccount}
-                      disabled={deleteConfirmText !== 'DELETE'}
+                      disabled={deleteConfirmText !== 'DELETE' || isDeleting}
                       className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                        deleteConfirmText === 'DELETE'
+                        deleteConfirmText === 'DELETE' && !isDeleting
                           ? 'bg-[#ff6b6b] text-white hover:bg-[#e55555]'
                           : 'bg-[#333] text-[#666] cursor-not-allowed'
                       }`}
                     >
-                      Yes, Delete My Account
+                      {isDeleting ? 'Deleting…' : 'Yes, Delete My Account'}
                     </button>
                     <button
                       onClick={() => {
                         setShowDeleteConfirm(false)
                         setDeleteConfirmText('')
                       }}
-                      className="px-6 py-2 bg-[#333] text-[#e0e0e0] rounded-lg font-medium hover:bg-[#444] transition-all"
+                      disabled={isDeleting}
+                      className="px-6 py-2 bg-[#333] text-[#e0e0e0] rounded-lg font-medium hover:bg-[#444] transition-all disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -878,28 +667,6 @@ function Settings({
                   <option value="dark">🌙 Dark</option>
                   <option value="light">☀️ Light</option>
                   <option value="system">💻 System</option>
-                </select>
-              </div>
-
-              {/* Month Start Day */}
-              <div className="flex items-center justify-between bg-[#0f0f0f] rounded-lg px-4 py-4">
-                <div>
-                  <p className="text-[#e0e0e0] font-medium">Budget Month Starts On</p>
-                  <p className="text-[#666] text-sm">When your monthly budget resets</p>
-                </div>
-                <select 
-                  value={profile.monthStartDay}
-                  onChange={(e) => {
-                    const newProfile = { ...profile, monthStartDay: parseInt(e.target.value) }
-                    setProfile(newProfile)
-                    saveToStorage('budgetbuddy_profile', newProfile)
-                    showToast('Month start day updated', 'success')
-                  }}
-                  className="bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-2 text-[#e0e0e0] focus:outline-none cursor-pointer"
-                >
-                  {[1, 5, 10, 15, 20, 25].map(day => (
-                    <option key={day} value={day}>{day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of month</option>
-                  ))}
                 </select>
               </div>
 

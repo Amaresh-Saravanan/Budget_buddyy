@@ -6,35 +6,14 @@ import MonthlyChallenge from '../components/MonthlyChallenge'
 import CategoryBadges from '../components/CategoryBadges'
 import WeeklyProgress from '../components/WeeklyProgress'
 import { CATEGORY_META as CATEGORY_COLORS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
+import { DEFAULT_SETTINGS } from '../constants/settings'
 
-// Helper to load from localStorage
-const loadFromStorage = (key, defaultValue) => {
-  try {
-    const saved = localStorage.getItem(key)
-    return saved ? JSON.parse(saved) : defaultValue
-  } catch {
-    return defaultValue
-  }
-}
-
-function Gamification({ expenses = [], savings = [], reminders = [] }) {
+function Gamification({ expenses = [], savings = [], reminders = [], settings = DEFAULT_SETTINGS }) {
   const [showNoSpendCelebration, setShowNoSpendCelebration] = useState(false)
-  
-  // Load profile and budgets from localStorage
-  const [profile] = useState(() => loadFromStorage('budgetbuddy_profile', {
-    name: 'User',
-    currency: '₹'
-  }))
-  
-  const [monthlyBudget] = useState(() => 
-    loadFromStorage('budgetbuddy_monthlyBudget', 25000)
-  )
-  
-  const [categoryBudgets] = useState(() => 
-    loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS)
-  )
 
-  const currency = profile.currency || '₹'
+  const monthlyBudget = settings.monthlyBudget ?? DEFAULT_SETTINGS.monthlyBudget
+  const categoryBudgets = settings.categoryBudgets || DEFAULT_CATEGORY_BUDGETS
+  const currency = settings.currency || '₹'
 
   // Check for no-spend day celebration
   useEffect(() => {

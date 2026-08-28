@@ -1,5 +1,14 @@
 import { db } from '../config/db.js'
-import { users } from '../models/schema.js'
+import {
+  users,
+  expenses,
+  incomes,
+  savings,
+  savingGoals,
+  reminders,
+  syncedEmails,
+  emailConnections
+} from '../models/schema.js'
 import { eq } from 'drizzle-orm'
 
 // @desc    Sync user from Clerk (create or update)
@@ -196,6 +205,33 @@ export const updateGamification = async (req, res) => {
   }
 }
 
+// @desc    Delete the signed-in user's account and every record they own
+// @route   DELETE /api/auth/me
+// @access  Private
+export const deleteAccount = async (req, res) => {
+  try {
+    // Order matters only in that the users row goes last — if anything fails
+    // partway, the account still exists and the user can retry rather than
+    // being locked out of an account whose data is half-deleted.
+    await db.delete(expenses).where(eq(expenses.userId, req.userId))
+    await db.delete(incomes).where(eq(incomes.userId, req.userId))
+    await db.delete(savings).where(eq(savings.userId, req.userId))
+    await db.delete(savingGoals).where(eq(savingGoals.userId, req.userId))
+    await db.delete(reminders).where(eq(reminders.userId, req.userId))
+    await db.delete(syncedEmails).where(eq(syncedEmails.userId, req.userId))
+    await db.delete(emailConnections).where(eq(emailConnections.userId, req.userId))
+    await db.delete(users).where(eq(users.clerkId, req.userId))
+
+    res.json({ success: true, message: 'Account data deleted' })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete account data',
+      error: error.message
+    })
+  }
+}
+
 // @desc    Handle Clerk webhook events
 // @route   POST /api/auth/webhook
 // @access  Public (verified by webhook signature)
@@ -247,5 +283,6 @@ export default {
   getMe,
   updateSettings,
   updateGamification,
+  deleteAccount,
   handleWebhook
 }

@@ -1,17 +1,8 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import SmartAlerts from '../components/SmartAlerts'
 import { CATEGORY_META as CATEGORY_COLORS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
-
-// Helper to load from localStorage
-const loadFromStorage = (key, defaultValue) => {
-  try {
-    const saved = localStorage.getItem(key)
-    return saved ? JSON.parse(saved) : defaultValue
-  } catch {
-    return defaultValue
-  }
-}
+import { DEFAULT_SETTINGS } from '../constants/settings'
 
 // Helper to format relative time
 function getRelativeTime(date) {
@@ -30,53 +21,21 @@ function getRelativeTime(date) {
   return expDate.toLocaleDateString()
 }
 
-function Dashboard({ expenses, savings, reminders, income = [] }) {
+function Dashboard({ expenses, savings, reminders, income = [], settings = DEFAULT_SETTINGS }) {
   const { user } = useUser()
   const [showScoreDetails, setShowScoreDetails] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
-  
-  // Get profile from Clerk user (Google sign-in)
+
+  // Identity comes from Clerk; money settings come from the server.
   const profile = {
     name: user?.fullName || user?.firstName || 'User',
     email: user?.primaryEmailAddress?.emailAddress || 'user@email.com',
     imageUrl: user?.imageUrl,
-    phone: '',
-    currency: '₹',
-    monthStartDay: 1
+    currency: settings.currency || '₹'
   }
 
-  // Load budgets from localStorage (synced with Settings)
-  const [monthlyBudget, setMonthlyBudget] = useState(() => 
-    loadFromStorage('budgetbuddy_monthlyBudget', 25000)
-  )
-  const [categoryBudgets, setCategoryBudgets] = useState(() => 
-    loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS)
-  )
-
-  // Listen for localStorage changes (when Settings updates)
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setMonthlyBudget(loadFromStorage('budgetbuddy_monthlyBudget', 25000))
-      setCategoryBudgets(loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS))
-    }
-
-    // Check for updates every time component is focused
-    window.addEventListener('focus', handleStorageChange)
-    
-    // Also check on storage event (for cross-tab sync)
-    window.addEventListener('storage', handleStorageChange)
-
-    return () => {
-      window.removeEventListener('focus', handleStorageChange)
-      window.removeEventListener('storage', handleStorageChange)
-    }
-  }, [])
-
-  // Re-check localStorage when component mounts or route changes
-  useEffect(() => {
-    setMonthlyBudget(loadFromStorage('budgetbuddy_monthlyBudget', 25000))
-    setCategoryBudgets(loadFromStorage('budgetbuddy_categoryBudgets', DEFAULT_CATEGORY_BUDGETS))
-  }, [])
+  const monthlyBudget = settings.monthlyBudget ?? DEFAULT_SETTINGS.monthlyBudget
+  const categoryBudgets = settings.categoryBudgets || DEFAULT_CATEGORY_BUDGETS
 
   const stats = useMemo(() => {
     const now = new Date()
