@@ -182,17 +182,26 @@ export const completeReminder = async (req, res) => {
 
     const reminder = existing[0]
 
-    // Mark as completed
+    // Accepts an explicit target state so the same endpoint can un-mark a
+    // bill that was ticked off by mistake; defaults to marking it paid.
+    const isCompleted = req.body?.isCompleted === undefined ? true : Boolean(req.body.isCompleted)
+
     await db.update(reminders)
-      .set({ 
-        isCompleted: true, 
-        completedAt: new Date(),
+      .set({
+        isCompleted,
+        completedAt: isCompleted ? new Date() : null,
         updatedAt: new Date()
       })
       .where(eq(reminders.id, parseInt(req.params.id)))
 
-    // If recurring, create next reminder
-    if (reminder.isRecurring && reminder.recurringFrequency) {
+    // Spawn the next occurrence only on an actual unpaid -> paid transition.
+    // Without the `!reminder.isCompleted` guard, marking an already-paid
+    // recurring bill again would create a duplicate every time.
+    // Note: un-marking does not remove an already-spawned next occurrence —
+    // deleting a reminder the user may have since edited would be worse than
+    // leaving it for them to remove.
+    const isNewlyCompleted = isCompleted && !reminder.isCompleted
+    if (isNewlyCompleted && reminder.isRecurring && reminder.recurringFrequency) {
       const nextDate = new Date(reminder.date)
       
       switch (reminder.recurringFrequency) {

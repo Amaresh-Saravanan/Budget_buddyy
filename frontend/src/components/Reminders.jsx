@@ -1,19 +1,31 @@
 import React, { useState } from 'react';
-import { Bell, Plus, Edit2, Trash2, X, Calendar, Clock } from 'lucide-react';
+import { Bell, Plus, Edit2, Trash2, X, Calendar, Clock, Check, RotateCcw } from 'lucide-react';
 
-const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteReminder }) => {
+// Midnight today, for comparing against a reminder's timestamp. The stored
+// value is a full timestamp, so comparing it to a date-only string would be
+// a string comparison that only works by accident.
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteReminder, onToggleComplete }) => {
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [editingReminder, setEditingReminder] = useState(null);
 
   // Sort reminders by date
-  const sortedReminders = [...reminders].sort((a, b) => 
+  const sortedReminders = [...reminders].sort((a, b) =>
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  // Separate upcoming and past reminders
-  const today = new Date().toISOString().split('T')[0];
-  const upcomingReminders = sortedReminders.filter(r => r.date >= today);
-  const pastReminders = sortedReminders.filter(r => r.date < today);
+  const today = startOfToday().getTime();
+  const unpaid = sortedReminders.filter(r => !r.isCompleted);
+  const paid = sortedReminders.filter(r => r.isCompleted);
+  const overdueReminders = unpaid.filter(r => new Date(r.date).getTime() < today);
+  const upcomingReminders = unpaid.filter(r => new Date(r.date).getTime() >= today);
+
+  const totalDue = unpaid.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -25,14 +37,43 @@ const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteRe
         <p className="text-[#a0a0a0] text-sm">Set reminders for bills, payments, and important dates.</p>
       </div>
 
-      {/* Add Reminder Button */}
-      <button
-        onClick={() => setShowAddReminder(true)}
-        className="mb-6 bg-[#FFD700] hover:bg-[#F0C800] text-[#0f0f0f] px-6 py-3 rounded-lg flex items-center gap-2 font-bold transition-all duration-200 hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]"
-      >
-        <Plus size={20} />
-        Add Reminder
-      </button>
+      {/* Summary + Add */}
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        <button
+          onClick={() => setShowAddReminder(true)}
+          className="bg-[#FFD700] hover:bg-[#F0C800] text-[#0f0f0f] px-6 py-3 rounded-lg flex items-center gap-2 font-bold transition-all duration-200 hover:shadow-[0_0_20px_rgba(255,215,0,0.5)]"
+        >
+          <Plus size={20} />
+          Add Reminder
+        </button>
+        {unpaid.length > 0 && (
+          <div className="text-sm text-[#a0a0a0]">
+            <span className="text-[#FFD700] font-semibold">{unpaid.length}</span> unpaid
+            {totalDue > 0 && <> · <span className="text-[#FFD700] font-semibold">₹{totalDue.toLocaleString('en-IN')}</span> due</>}
+          </div>
+        )}
+      </div>
+
+      {/* Overdue */}
+      {overdueReminders.length > 0 && (
+        <div className="bg-[#1a1a1a] rounded-xl p-6 border border-[#ff6b6b]/40 shadow-lg mb-6">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-[#ff6b6b]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <Bell size={24} />
+            Overdue
+          </h2>
+          <div className="space-y-3">
+            {overdueReminders.map((reminder) => (
+              <ReminderCard
+                key={reminder.id}
+                reminder={reminder}
+                onEdit={setEditingReminder}
+                onToggleComplete={onToggleComplete}
+                isOverdue={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Upcoming Reminders */}
       <div className="bg-[#1a1a1a] rounded-xl p-6 border border-[#333] shadow-lg mb-6">
@@ -40,7 +81,7 @@ const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteRe
           <Bell className="text-[#FFD700]" size={24} />
           Upcoming Reminders
         </h2>
-        
+
         <div className="space-y-3">
           {upcomingReminders.length === 0 ? (
             <div className="text-center py-12 text-[#a0a0a0]">
@@ -54,29 +95,30 @@ const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteRe
                 key={reminder.id}
                 reminder={reminder}
                 onEdit={setEditingReminder}
-                onDelete={onDeleteReminder}
-                isUpcoming={true}
+                onToggleComplete={onToggleComplete}
+                isOverdue={false}
               />
             ))
           )}
         </div>
       </div>
 
-      {/* Past Reminders */}
-      {pastReminders.length > 0 && (
-        <div className="bg-[#1a1a1a] rounded-xl p-6 border border-[#333] shadow-lg opacity-60">
-          <h2 className="text-xl font-bold mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Past Reminders
+      {/* Paid */}
+      {paid.length > 0 && (
+        <div className="bg-[#1a1a1a] rounded-xl p-6 border border-[#333] shadow-lg">
+          <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-[#00ff88]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <Check size={22} />
+            Paid
           </h2>
-          
+
           <div className="space-y-3">
-            {pastReminders.map((reminder) => (
+            {paid.map((reminder) => (
               <ReminderCard
                 key={reminder.id}
                 reminder={reminder}
                 onEdit={setEditingReminder}
-                onDelete={onDeleteReminder}
-                isUpcoming={false}
+                onToggleComplete={onToggleComplete}
+                isOverdue={false}
               />
             ))}
           </div>
@@ -114,51 +156,87 @@ const Reminders = ({ reminders = [], onAddReminder, onUpdateReminder, onDeleteRe
 };
 
 // Reminder Card Component
-const ReminderCard = ({ reminder, onEdit, onDelete, isUpcoming }) => {
+const ReminderCard = ({ reminder, onEdit, onToggleComplete, isOverdue }) => {
+  const isPaid = Boolean(reminder.isCompleted);
+
   const getDaysUntil = (date) => {
-    const today = new Date();
+    const today = startOfToday();
     const reminderDate = new Date(date);
-    const diffTime = reminderDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+    reminderDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((reminderDate.getTime() - today.getTime()) / 86400000);
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
     if (diffDays < 0) return `${Math.abs(diffDays)} days ago`;
     return `In ${diffDays} days`;
   };
 
+  const accent = isPaid ? '#00ff88' : isOverdue ? '#ff6b6b' : '#FFD700';
+
   return (
     <div
-      onClick={() => onEdit({ ...reminder })}
-      className="group flex items-center justify-between p-4 bg-[#0f0f0f] rounded-lg border border-[#333] hover:border-[#FFD700] transition-all duration-200 cursor-pointer hover:shadow-[0_0_15px_rgba(255,215,0,0.2)]"
+      className={`group flex items-center justify-between gap-3 p-4 bg-[#0f0f0f] rounded-lg border transition-all duration-200 ${
+        isPaid ? 'border-[#333] opacity-60' : 'border-[#333] hover:border-[#FFD700] hover:shadow-[0_0_15px_rgba(255,215,0,0.2)]'
+      }`}
     >
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 bg-[#FFD700]/20 rounded-lg flex items-center justify-center text-2xl border border-[#FFD700]">
-          🔔
+      <button
+        onClick={() => onToggleComplete(reminder)}
+        title={isPaid ? 'Mark as unpaid' : 'Mark as paid'}
+        className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center border transition-all ${
+          isPaid
+            ? 'bg-[#00ff88]/15 border-[#00ff88] text-[#00ff88] hover:bg-[#00ff88]/25'
+            : 'bg-[#1a1a1a] border-[#444] text-[#666] hover:border-[#00ff88] hover:text-[#00ff88]'
+        }`}
+      >
+        {isPaid ? <Check size={18} /> : <span className="text-lg">🔔</span>}
+      </button>
+
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onEdit({ ...reminder })}>
+        <div className={`font-medium truncate ${isPaid ? 'line-through text-[#a0a0a0]' : ''}`}>
+          {reminder.title}
         </div>
-        <div>
-          <div className="font-medium">{reminder.title}</div>
-          <div className="text-sm text-[#a0a0a0] flex items-center gap-2">
-            <Calendar size={14} />
-            <span>{new Date(reminder.date).toLocaleDateString()}</span>
-            {reminder.time && (
-              <>
-                <span>•</span>
-                <Clock size={14} />
-                <span>{reminder.time}</span>
-              </>
-            )}
-          </div>
-          {reminder.description && (
-            <div className="text-xs text-[#a0a0a0] mt-1">{reminder.description}</div>
+        <div className="text-sm text-[#a0a0a0] flex items-center gap-2 flex-wrap">
+          <Calendar size={14} />
+          <span>{new Date(reminder.date).toLocaleDateString()}</span>
+          {reminder.time && (
+            <>
+              <span>•</span>
+              <Clock size={14} />
+              <span>{reminder.time}</span>
+            </>
+          )}
+          {reminder.amount > 0 && (
+            <>
+              <span>•</span>
+              <span>₹{parseFloat(reminder.amount).toLocaleString('en-IN')}</span>
+            </>
           )}
         </div>
+        {reminder.description && (
+          <div className="text-xs text-[#a0a0a0] mt-1 truncate">{reminder.description}</div>
+        )}
       </div>
-      <div className="flex items-center gap-3">
-        <div className={`font-bold text-sm ${isUpcoming ? 'text-[#FFD700]' : 'text-[#a0a0a0]'}`}>
-          {getDaysUntil(reminder.date)}
+
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="font-bold text-sm" style={{ color: accent }}>
+          {isPaid ? 'Paid' : getDaysUntil(reminder.date)}
         </div>
-        <Edit2 size={18} className="text-[#a0a0a0] opacity-0 group-hover:opacity-100 transition-opacity" />
+        {isPaid ? (
+          <button
+            onClick={() => onToggleComplete(reminder)}
+            title="Mark as unpaid"
+            className="text-[#a0a0a0] opacity-0 group-hover:opacity-100 transition-opacity hover:text-[#FFD700]"
+          >
+            <RotateCcw size={16} />
+          </button>
+        ) : (
+          <Edit2
+            size={18}
+            onClick={() => onEdit({ ...reminder })}
+            className="text-[#a0a0a0] opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-[#FFD700]"
+          />
+        )}
       </div>
     </div>
   );

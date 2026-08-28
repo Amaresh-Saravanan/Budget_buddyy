@@ -287,6 +287,27 @@ function AppContent() {
     }
   }
 
+  // Marking a bill paid can spawn the next occurrence of a recurring
+  // reminder server-side, so refetch rather than assuming the local list
+  // is still complete after the toggle.
+  const handleToggleReminderComplete = async (reminder) => {
+    const target = !reminder.isCompleted
+    try {
+      const token = await getToken()
+      const response = await remindersAPI.setCompleted(reminder.id, target, token)
+      if (response.success && response.data) {
+        setReminders(reminders.map(rem => (rem.id === reminder.id ? response.data : rem)))
+        if (target && reminder.isRecurring) {
+          const refreshed = await remindersAPI.getAll({}, token)
+          if (refreshed.success && refreshed.data) setReminders(refreshed.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update reminder:', error)
+      showToast(`Could not mark this bill as ${target ? 'paid' : 'unpaid'}. Check your connection and try again.`)
+    }
+  }
+
   // Income handlers - now save to database
   const handleAddIncome = async (newIncome) => {
     try {
@@ -557,11 +578,12 @@ function AppContent() {
           <Route 
             path="/reminders" 
             element={
-              <Reminders 
+              <Reminders
                 reminders={reminders}
                 onAddReminder={handleAddReminder}
                 onDeleteReminder={handleDeleteReminder}
                 onUpdateReminder={handleUpdateReminder}
+                onToggleComplete={handleToggleReminderComplete}
               />
             } 
           />

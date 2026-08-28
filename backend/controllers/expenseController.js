@@ -130,8 +130,10 @@ export const updateExpense = async (req, res) => {
       .set({
         ...(amount !== undefined && { amount }),
         ...(category && { category }),
-        ...(description && { description }),
-        ...(note && { note }),
+        // Checked against undefined, not truthiness, so clearing a
+        // description or note to an empty string actually saves.
+        ...(description !== undefined && { description }),
+        ...(note !== undefined && { note }),
         ...(date && { date: new Date(date) }),
         ...(tags && { tags }),
         updatedAt: new Date()

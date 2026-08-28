@@ -233,9 +233,12 @@ export const remindersAPI = {
     }, token)
   },
 
-  // Mark reminder as complete
-  complete: async (id, token) => {
-    return apiRequest(`/reminders/${id}/complete`, { method: 'PUT' }, token)
+  // Mark a reminder paid, or unpaid by passing isCompleted: false
+  setCompleted: async (id, isCompleted, token) => {
+    return apiRequest(`/reminders/${id}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify({ isCompleted })
+    }, token)
   },
 
   // Delete reminder
