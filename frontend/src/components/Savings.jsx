@@ -1,5 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Target, TrendingUp, Edit2, Trash2, X, PiggyBank } from 'lucide-react';
+
+// Focus trap + Escape-to-close for modal dialogs
+function useModalA11y(modalRef, onClose) {
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    if (!modalRef.current?.contains(document.activeElement)) {
+      const focusable = modalRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      focusable?.[0]?.focus();
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const items = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
 
 const Savings = ({ savings = [], onAddSaving, onUpdateSaving, onDeleteSaving }) => {
   const [showAddSaving, setShowAddSaving] = useState(false);
@@ -73,10 +115,19 @@ const Savings = ({ savings = [], onAddSaving, onUpdateSaving, onDeleteSaving }) 
               <div
                 key={saving.id}
                 onClick={() => setEditingSaving({ ...saving })}
-                className="group flex items-center justify-between p-4 bg-[#0f0f0f] rounded-lg border border-[#333] hover:border-[#00ff88] transition-all duration-200 cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,136,0.2)]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setEditingSaving({ ...saving });
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Edit saving: ${saving.note}, amount ${saving.amount.toFixed(2)}`}
+                className="group flex items-center justify-between p-4 bg-[#0f0f0f] rounded-lg border border-[#333] hover:border-[#00ff88] transition-all duration-200 cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,136,0.2)] focus:outline-none focus:ring-2 focus:ring-[#00ff88]"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[#00ff88]/20 rounded-lg flex items-center justify-center text-2xl border border-[#00ff88]">
+                  <div className="w-10 h-10 bg-[#00ff88]/20 rounded-lg flex items-center justify-center text-2xl border border-[#00ff88]" aria-hidden="true">
                     💰
                   </div>
                   <div>
@@ -90,7 +141,7 @@ const Savings = ({ savings = [], onAddSaving, onUpdateSaving, onDeleteSaving }) 
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-[#00ff88] font-bold text-lg">+{saving.amount.toFixed(2)}</div>
-                  <Edit2 size={18} className="text-[#a0a0a0] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Edit2 size={18} aria-hidden="true" className="text-[#a0a0a0] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             ))
@@ -158,15 +209,24 @@ const AddSavingModal = ({ onClose, onAddSaving }) => {
     onAddSaving(newSaving);
   };
 
+  const modalRef = useRef(null);
+  useModalA11y(modalRef, onClose);
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-saving-title"
+        className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h2 id="add-saving-title" className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             Add Saving
           </h2>
-          <button onClick={onClose} className="text-[#a0a0a0] hover:text-white transition-colors">
-            <X size={24} />
+          <button onClick={onClose} aria-label="Close" className="text-[#a0a0a0] hover:text-white transition-colors">
+            <X size={24} aria-hidden="true" />
           </button>
         </div>
         <p className="text-[#a0a0a0] text-sm mb-6">Track money you've saved.</p>
@@ -174,15 +234,17 @@ const AddSavingModal = ({ onClose, onAddSaving }) => {
         <div className="space-y-6">
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium mb-3 uppercase tracking-wide">
+            <label htmlFor="saving-amount" className="block text-sm font-medium mb-3 uppercase tracking-wide">
               Amount
             </label>
             <input
+              id="saving-amount"
               type="number"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
               className="w-full bg-[#0f0f0f] border-2 border-[#00ff88] rounded-lg px-4 py-3 text-lg focus:outline-none focus:shadow-[0_0_15px_rgba(0,255,136,0.5)] transition-all"
               placeholder="0"
+              aria-required="true"
               autoFocus
             />
           </div>
@@ -205,10 +267,11 @@ const AddSavingModal = ({ onClose, onAddSaving }) => {
 
           {/* Note */}
           <div>
-            <label className="block text-sm font-medium mb-2 uppercase tracking-wide">
+            <label htmlFor="saving-note" className="block text-sm font-medium mb-2 uppercase tracking-wide">
               Note (Optional)
             </label>
             <input
+              id="saving-note"
               type="text"
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -219,10 +282,11 @@ const AddSavingModal = ({ onClose, onAddSaving }) => {
 
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium mb-2 uppercase tracking-wide">
+            <label htmlFor="saving-date" className="block text-sm font-medium mb-2 uppercase tracking-wide">
               Date
             </label>
             <input
+              id="saving-date"
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -269,23 +333,33 @@ const EditSavingModal = ({ saving, onClose, onUpdate, onDelete }) => {
     });
   };
 
+  const modalRef = useRef(null);
+  useModalA11y(modalRef, onClose);
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-saving-title"
+        className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h2 id="edit-saving-title" className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             Edit Saving
           </h2>
-          <button onClick={onClose} className="text-[#a0a0a0] hover:text-white transition-colors">
-            <X size={24} />
+          <button onClick={onClose} aria-label="Close" className="text-[#a0a0a0] hover:text-white transition-colors">
+            <X size={24} aria-hidden="true" />
           </button>
         </div>
 
         <div className="space-y-4">
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium mb-2 uppercase tracking-wide">Amount</label>
+            <label htmlFor="edit-saving-amount" className="block text-sm font-medium mb-2 uppercase tracking-wide">Amount</label>
             <input
+              id="edit-saving-amount"
               type="number"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
@@ -295,8 +369,9 @@ const EditSavingModal = ({ saving, onClose, onUpdate, onDelete }) => {
 
           {/* Note */}
           <div>
-            <label className="block text-sm font-medium mb-2 uppercase tracking-wide">Note</label>
+            <label htmlFor="edit-saving-note" className="block text-sm font-medium mb-2 uppercase tracking-wide">Note</label>
             <input
+              id="edit-saving-note"
               type="text"
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -306,8 +381,9 @@ const EditSavingModal = ({ saving, onClose, onUpdate, onDelete }) => {
 
           {/* Date */}
           <div>
-            <label className="block text-sm font-medium mb-2 uppercase tracking-wide">Date</label>
+            <label htmlFor="edit-saving-date" className="block text-sm font-medium mb-2 uppercase tracking-wide">Date</label>
             <input
+              id="edit-saving-date"
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -319,9 +395,10 @@ const EditSavingModal = ({ saving, onClose, onUpdate, onDelete }) => {
           <div className="flex gap-3 pt-4">
             <button
               onClick={() => onDelete(saving.id)}
+              aria-label={`Delete saving: ${saving.note}`}
               className="flex-1 bg-[#ff4444] hover:bg-[#ff3333] text-white py-3 rounded-lg font-medium transition-all duration-200 hover:shadow-[0_0_20px_rgba(255,68,68,0.5)] flex items-center justify-center gap-2"
             >
-              <Trash2 size={18} />
+              <Trash2 size={18} aria-hidden="true" />
               Delete
             </button>
             <button

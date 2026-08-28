@@ -263,9 +263,9 @@ function Dashboard({ expenses, savings, reminders }) {
             />
           )}
           <div>
-            <h2 className="text-3xl font-bold text-[#e0e0e0]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h1 className="text-3xl font-bold text-[#e0e0e0]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               Hi, {userName}! 👋
-            </h2>
+            </h1>
             <p className="text-[#666] text-sm">{profile.email}</p>
           </div>
         </div>
@@ -309,13 +309,23 @@ function Dashboard({ expenses, savings, reminders }) {
         </div>
 
         {/* Finance Health Score Widget */}
-        <div 
-          className="bg-[#1a1a1a]/80 border border-[#333] rounded-xl p-4 cursor-pointer hover:border-[#bb86fc] transition-all"
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={showScoreDetails}
+          aria-controls="score-details-panel"
+          className="bg-[#1a1a1a]/80 border border-[#333] rounded-xl p-4 cursor-pointer hover:border-[#bb86fc] transition-all focus:outline-none focus:ring-2 focus:ring-[#bb86fc]"
           onClick={() => setShowScoreDetails(!showScoreDetails)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setShowScoreDetails(!showScoreDetails);
+            }
+          }}
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[#a0a0a0] text-sm">Finance Health Score</span>
-            <span className="text-sm text-[#666]">Tap to see breakdown</span>
+            <span className="text-sm text-[#666]">Tap to {showScoreDetails ? 'hide' : 'see'} breakdown</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-4xl font-bold" style={{ color: scoreInfo.color }}>
@@ -341,7 +351,7 @@ function Dashboard({ expenses, savings, reminders }) {
 
           {/* Score Details (Expandable) */}
           {showScoreDetails && (
-            <div className="mt-4 pt-4 border-t border-[#333] animate-fadeIn">
+            <div id="score-details-panel" className="mt-4 pt-4 border-t border-[#333] animate-fadeIn">
               <h4 className="text-[#e0e0e0] font-semibold mb-3">📊 How it's calculated:</h4>
               
               <div className="space-y-3">
@@ -378,9 +388,9 @@ function Dashboard({ expenses, savings, reminders }) {
 
       {/* Quick Stats Section */}
       <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
           📊 Quick Stats
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-[#0f0f0f] rounded-lg p-4 text-center">
             <p className="text-[#666] text-xs mb-1">Spent this week</p>
@@ -403,9 +413,9 @@ function Dashboard({ expenses, savings, reminders }) {
 
       {/* Recent Transactions */}
       <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
           💳 Recent Transactions
-        </h3>
+        </h2>
         {recentExpenses.length > 0 ? (
           <div className="space-y-2">
             {recentExpenses.map((expense, index) => {
@@ -440,9 +450,9 @@ function Dashboard({ expenses, savings, reminders }) {
 
       {/* Category Overview Section */}
       <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-[#e0e0e0] mb-4 flex items-center gap-2">
           🎯 Category Overview
-        </h3>
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(stats.categoryBreakdown)
             .filter(([_, data]) => data.spent > 0 || data.budget > 0)
@@ -453,18 +463,30 @@ function Dashboard({ expenses, savings, reminders }) {
               const status = getCategoryStatus(data.spent, data.budget)
               const remaining = data.budget - data.spent
               
+              const categoryPanelId = `category-panel-${category}`
               return (
-                <div 
+                <div
                   key={category}
-                  className={`bg-[#0f0f0f] border border-[#333] rounded-xl p-4 cursor-pointer hover:border-[${data.color}] transition-all ${selectedCategory === category ? 'border-[#bb86fc]' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={selectedCategory === category}
+                  aria-controls={selectedCategory === category ? categoryPanelId : undefined}
+                  aria-label={`${category}: ${formatCurrency(data.spent)} of ${formatCurrency(data.budget)}, ${percentage}% used`}
+                  className={`bg-[#0f0f0f] border border-[#333] rounded-xl p-4 cursor-pointer hover:border-[${data.color}] transition-all focus:outline-none focus:ring-2 focus:ring-[#bb86fc] ${selectedCategory === category ? 'border-[#bb86fc]' : ''}`}
                   onClick={() => setSelectedCategory(selectedCategory === category ? null : category)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedCategory(selectedCategory === category ? null : category);
+                    }
+                  }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{data.icon}</span>
+                      <span className="text-xl" aria-hidden="true">{data.icon}</span>
                       <span className="text-[#e0e0e0] font-medium uppercase text-sm">{category}</span>
                     </div>
-                    <span className="text-lg">{status.icon}</span>
+                    <span className="text-lg" aria-hidden="true">{status.icon}</span>
                   </div>
                   
                   <div className="flex justify-between text-sm mb-2">
@@ -492,9 +514,9 @@ function Dashboard({ expenses, savings, reminders }) {
 
                   {/* Expanded Category Details */}
                   {selectedCategory === category && (
-                    <div className="mt-4 pt-4 border-t border-[#333] animate-fadeIn">
-                      <h4 className="text-[#a0a0a0] text-sm mb-3">📊 Spending Pattern:</h4>
-                      
+                    <div id={categoryPanelId} className="mt-4 pt-4 border-t border-[#333] animate-fadeIn">
+                      <h3 className="text-[#a0a0a0] text-sm mb-3">📊 Spending Pattern:</h3>
+
                       {data.expenses.length > 0 ? (
                         <div className="space-y-2">
                           <p className="text-[#666] text-xs mb-2">Recent Expenses:</p>
@@ -510,10 +532,16 @@ function Dashboard({ expenses, savings, reminders }) {
                       )}
 
                       <div className="flex gap-2 mt-4">
-                        <button className="flex-1 py-2 text-xs bg-[#1a1a1a] text-[#bb86fc] rounded-lg hover:bg-[#252525] transition-all">
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 py-2 text-xs bg-[#1a1a1a] text-[#bb86fc] rounded-lg hover:bg-[#252525] transition-all"
+                        >
                           View All
                         </button>
-                        <button className="flex-1 py-2 text-xs bg-[#1a1a1a] text-[#00ff88] rounded-lg hover:bg-[#252525] transition-all">
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 py-2 text-xs bg-[#1a1a1a] text-[#00ff88] rounded-lg hover:bg-[#252525] transition-all"
+                        >
                           Adjust Budget
                         </button>
                       </div>
@@ -539,9 +567,9 @@ function Dashboard({ expenses, savings, reminders }) {
 
       {/* Overview Section */}
       <div className="bg-gradient-to-r from-[#bb86fc]/10 to-[#1a1a1a] border border-[#333] rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-[#bb86fc] mb-4 flex items-center gap-2">
+        <h2 className="text-xl font-semibold text-[#bb86fc] mb-4 flex items-center gap-2">
           📈 Monthly Overview
-        </h3>
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#1a1a1a]/80 rounded-lg p-4">
             <p className="text-[#666] text-sm mb-2">Budget Usage</p>

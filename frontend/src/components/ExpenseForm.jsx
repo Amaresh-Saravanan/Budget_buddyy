@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 // Category icons mapping
@@ -49,21 +49,70 @@ const ExpenseForm = ({ show, onClose, onAddExpense }) => {
     onClose();
   };
 
+  const modalRef = useRef(null);
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!show) return;
+
+    const previouslyFocused = document.activeElement;
+    if (!modalRef.current?.contains(document.activeElement)) {
+      closeButtonRef.current?.focus();
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+        return;
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
+
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expense-form-title"
+        className="bg-[#1a1a1a] rounded-xl p-6 w-full max-w-md border border-[#333] shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+          <h2 id="expense-form-title" className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
             Add New Expense
           </h2>
           <button
+            ref={closeButtonRef}
             onClick={handleClose}
+            aria-label="Close"
             className="text-[#a0a0a0] hover:text-white transition-colors"
           >
-            <X size={24} />
+            <X size={24} aria-hidden="true" />
           </button>
         </div>
         <p className="text-[#a0a0a0] text-sm mb-6">Track where your money is going.</p>
@@ -72,16 +121,18 @@ const ExpenseForm = ({ show, onClose, onAddExpense }) => {
         {currentStep === 1 && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-3 uppercase tracking-wide">
+              <label htmlFor="expense-amount" className="block text-sm font-medium mb-3 uppercase tracking-wide">
                 Amount
               </label>
               <div className="relative">
                 <input
+                  id="expense-amount"
                   type="number"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   className="w-full bg-[#0f0f0f] border-2 border-[#bb86fc] rounded-lg px-4 py-3 text-lg focus:outline-none focus:shadow-[0_0_15px_rgba(187,134,252,0.5)] transition-all"
                   placeholder="0"
+                  aria-required="true"
                   autoFocus
                 />
               </div>
@@ -162,10 +213,11 @@ const ExpenseForm = ({ show, onClose, onAddExpense }) => {
         {currentStep === 3 && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-2 uppercase tracking-wide">
+              <label htmlFor="expense-note" className="block text-sm font-medium mb-2 uppercase tracking-wide">
                 Description
               </label>
               <input
+                id="expense-note"
                 type="text"
                 value={formData.note}
                 onChange={(e) => setFormData({ ...formData, note: e.target.value })}
@@ -175,10 +227,11 @@ const ExpenseForm = ({ show, onClose, onAddExpense }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 uppercase tracking-wide">
+              <label htmlFor="expense-date" className="block text-sm font-medium mb-2 uppercase tracking-wide">
                 Date
               </label>
               <input
+                id="expense-date"
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}

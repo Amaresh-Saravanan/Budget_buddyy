@@ -100,18 +100,22 @@ export default function Register() {
           <p className="text-[#a0a0a0] text-center mb-6">We sent a code to {formData.email}</p>
           
           {error && (
-            <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mb-4">
+            <div id="verify-error" role="alert" aria-live="assertive" className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 mb-4">
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
-          
+
           <form onSubmit={handleVerify} className="space-y-4">
+            <label htmlFor="verify-code" className="sr-only">Verification code</label>
             <input
+              id="verify-code"
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Enter verification code"
               className="w-full bg-[#0f0f0f] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-[#666] focus:border-[#bb86fc] focus:outline-none"
+              aria-invalid={!!error}
+              aria-describedby={error ? 'verify-error' : undefined}
             />
             <button
               type="submit"
@@ -182,7 +186,7 @@ export default function Register() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div id="register-error" role="alert" aria-live="assertive" className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
@@ -191,8 +195,9 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[#374151] text-sm font-medium mb-1.5">First Name</label>
+                <label htmlFor="register-first-name" className="block text-[#374151] text-sm font-medium mb-1.5">First Name</label>
                 <input
+                  id="register-first-name"
                   type="text"
                   value={formData.firstName}
                   onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -202,8 +207,9 @@ export default function Register() {
                 />
               </div>
               <div>
-                <label className="block text-[#374151] text-sm font-medium mb-1.5">Last Name</label>
+                <label htmlFor="register-last-name" className="block text-[#374151] text-sm font-medium mb-1.5">Last Name</label>
                 <input
+                  id="register-last-name"
                   type="text"
                   value={formData.lastName}
                   onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -215,41 +221,52 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-[#374151] text-sm font-medium mb-1.5">Email</label>
+              <label htmlFor="register-email" className="block text-[#374151] text-sm font-medium mb-1.5">Email</label>
               <input
+                id="register-email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-white border border-[#e5e7eb] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[#9ca3af] focus:border-[#bb86fc] focus:ring-2 focus:ring-[#bb86fc]/20 focus:outline-none transition-all"
                 placeholder="Enter email"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? 'register-error' : undefined}
               />
             </div>
 
             <div>
-              <label className="block text-[#374151] text-sm font-medium mb-1.5">Password</label>
+              <label htmlFor="register-password" className="block text-[#374151] text-sm font-medium mb-1.5">Password</label>
               <div className="relative">
                 <input
+                  id="register-password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full bg-white border border-[#e5e7eb] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[#9ca3af] focus:border-[#bb86fc] focus:ring-2 focus:ring-[#bb86fc]/20 focus:outline-none transition-all pr-12"
                   placeholder="Create a password"
                   required
+                  aria-invalid={!!error}
+                  aria-describedby={formData.password ? 'password-strength' : (error ? 'register-error' : undefined)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#6b7280]"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
                 </button>
               </div>
 
               {/* Password Strength */}
               {formData.password && (
-                <div className="mt-3 space-y-2">
-                  <div className="flex gap-1">
+                <div id="password-strength" className="mt-3 space-y-2">
+                  <p role="status" className="sr-only">
+                    Password strength: {passwordStrength} of {passwordChecks.length} requirements met
+                  </p>
+                  <div className="flex gap-1" aria-hidden="true">
                     {[1, 2, 3, 4, 5].map((level) => (
                       <div
                         key={level}
@@ -269,9 +286,9 @@ export default function Register() {
                     {passwordChecks.map((check, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs">
                         {check.check ? (
-                          <Check size={12} className="text-green-500" />
+                          <Check size={12} aria-hidden="true" className="text-green-500" />
                         ) : (
-                          <X size={12} className="text-[#d1d5db]" />
+                          <X size={12} aria-hidden="true" className="text-[#d1d5db]" />
                         )}
                         <span className={check.check ? 'text-green-600' : 'text-[#9ca3af]'}>
                           {check.label}
