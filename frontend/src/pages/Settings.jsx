@@ -1,58 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useUser, useAuth } from '@clerk/clerk-react'
 import { authAPI } from '../services/api'
-
-// Default category budgets
-const DEFAULT_BUDGETS = {
-  'Food': 6000,
-  'Transport': 3000,
-  'Shopping': 4000,
-  'Entertainment': 2000,
-  'Bills': 5000,
-  'Health': 2000,
-  'Other': 3000
-}
-
-const CATEGORY_ICONS = {
-  'Food': '🍔',
-  'Transport': '🚗',
-  'Shopping': '🛒',
-  'Entertainment': '🎬',
-  'Bills': '📄',
-  'Health': '💊',
-  'Other': '📦'
-}
+import { CATEGORY_ICONS, DEFAULT_CATEGORY_BUDGETS as DEFAULT_BUDGETS } from '../constants/categories'
+import Toast from '../components/Toast'
 
 const CURRENCY_NAMES = {
   '₹': 'Indian Rupee',
   '$': 'US Dollar',
   '€': 'Euro',
   '£': 'British Pound'
-}
-
-// Toast notification component
-function Toast({ message, type, onClose }) {
-  useEffect(() => {
-    const timer = setTimeout(onClose, 3000)
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  const bgColor = {
-    success: 'bg-[#00ff88]',
-    error: 'bg-[#ff6b6b]',
-    warning: 'bg-[#FFD700]',
-    info: 'bg-[#4ecdc4]'
-  }[type] || 'bg-[#bb86fc]'
-
-  const textColor = type === 'warning' ? 'text-[#0f0f0f]' : type === 'success' ? 'text-[#0f0f0f]' : 'text-white'
-
-  return (
-    <div className={`fixed top-4 right-4 ${bgColor} ${textColor} px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeIn flex items-center gap-3`}>
-      <span>{type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ'}</span>
-      <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70">×</button>
-    </div>
-  )
 }
 
 function Settings({ 
@@ -411,12 +367,12 @@ function Settings({
     
     // Add savings
     savings.forEach(sav => {
-      csvContent += `Saving,"${sav.description}",${sav.amount},,${new Date(sav.date).toLocaleDateString()},${sav.targetAmount}\n`
+      csvContent += `Saving,"${sav.note || 'Savings'}",${sav.amount},,${new Date(sav.date).toLocaleDateString()},\n`
     })
-    
+
     // Add reminders
     reminders.forEach(rem => {
-      csvContent += `Reminder,"${rem.title}",,,${new Date(rem.dueDate).toLocaleDateString()},\n`
+      csvContent += `Reminder,"${rem.title}",${rem.amount || ''},${rem.category || ''},${new Date(rem.date).toLocaleDateString()},\n`
     })
 
     // Create and download file
@@ -470,8 +426,9 @@ function Settings({
         })
 
         if (importedExpenses.length > 0 && onImportExpenses) {
+          // App.jsx reports the real outcome once the server confirms each
+          // row was saved — don't claim success here before that happens.
           onImportExpenses(importedExpenses)
-          showToast(`Imported ${importedExpenses.length} expenses successfully!`, 'success')
         } else if (importedExpenses.length === 0) {
           showToast('No valid expenses found in file', 'warning')
         }
@@ -484,12 +441,16 @@ function Settings({
   }
 
   // Clear all data
-  const handleClearAllData = () => {
-    if (onClearAllData) {
-      onClearAllData()
-    }
+  const handleClearAllData = async () => {
     setShowClearDataConfirm(false)
-    showToast('All data cleared successfully', 'success')
+    try {
+      if (onClearAllData) {
+        await onClearAllData()
+      }
+      showToast('All data cleared successfully', 'success')
+    } catch (error) {
+      // App.jsx already surfaces the detailed error toast; nothing more to do here.
+    }
   }
 
   const tabs = [

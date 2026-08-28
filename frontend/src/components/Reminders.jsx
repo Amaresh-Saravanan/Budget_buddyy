@@ -149,8 +149,8 @@ const ReminderCard = ({ reminder, onEdit, onDelete, isUpcoming }) => {
               </>
             )}
           </div>
-          {reminder.note && (
-            <div className="text-xs text-[#a0a0a0] mt-1">{reminder.note}</div>
+          {reminder.description && (
+            <div className="text-xs text-[#a0a0a0] mt-1">{reminder.description}</div>
           )}
         </div>
       </div>
@@ -170,19 +170,17 @@ const AddReminderModal = ({ onClose, onAddReminder }) => {
     title: '',
     date: new Date().toISOString().split('T')[0],
     time: '',
-    note: ''
+    description: ''
   });
 
   const handleSubmit = () => {
     if (!formData.title || !formData.date) return;
 
     const newReminder = {
-      id: Date.now(),
       title: formData.title,
       date: formData.date,
       time: formData.time,
-      note: formData.note,
-      timestamp: Date.now()
+      description: formData.description
     };
 
     onAddReminder(newReminder);
@@ -249,8 +247,8 @@ const AddReminderModal = ({ onClose, onAddReminder }) => {
               Note (Optional)
             </label>
             <textarea
-              value={formData.note}
-              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full bg-[#0f0f0f] border border-[#333] focus:border-[#FFD700] rounded-lg px-4 py-3 focus:outline-none focus:shadow-[0_0_15px_rgba(255,215,0,0.3)] transition-all resize-none"
               placeholder="Additional details..."
               rows={3}
@@ -285,7 +283,7 @@ const EditReminderModal = ({ reminder, onClose, onUpdate, onDelete }) => {
     title: reminder.title,
     date: reminder.date,
     time: reminder.time || '',
-    note: reminder.note || ''
+    description: reminder.description || ''
   });
 
   const handleUpdate = () => {
@@ -294,7 +292,7 @@ const EditReminderModal = ({ reminder, onClose, onUpdate, onDelete }) => {
       title: formData.title,
       date: formData.date,
       time: formData.time,
-      note: formData.note
+      description: formData.description
     });
   };
 
@@ -348,8 +346,8 @@ const EditReminderModal = ({ reminder, onClose, onUpdate, onDelete }) => {
           <div>
             <label className="block text-sm font-medium mb-2 uppercase tracking-wide">Note</label>
             <textarea
-              value={formData.note}
-              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full bg-[#0f0f0f] border border-[#333] focus:border-[#FFD700] rounded-lg px-4 py-3 focus:outline-none focus:shadow-[0_0_15px_rgba(255,215,0,0.3)] transition-all resize-none"
               rows={3}
             />

@@ -1,25 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-
-// Category icons and colors (budgets come from localStorage)
-const CATEGORY_CONFIG = {
-  'Food': { icon: '🍔', color: '#ff6b6b' },
-  'Transport': { icon: '🚗', color: '#4ecdc4' },
-  'Shopping': { icon: '🛒', color: '#bb86fc' },
-  'Entertainment': { icon: '🎬', color: '#FFD700' },
-  'Bills': { icon: '📄', color: '#00ff88' },
-  'Health': { icon: '💊', color: '#ff9f43' },
-  'Other': { icon: '📦', color: '#a0a0a0' }
-}
-
-const DEFAULT_CATEGORY_BUDGETS = {
-  Food: 6000,
-  Transport: 3000,
-  Shopping: 4000,
-  Entertainment: 2000,
-  Bills: 5000,
-  Health: 2000,
-  Other: 3000
-}
+import { CATEGORY_META as CATEGORY_CONFIG, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
 
 function Analytics({ expenses, savings }) {
   const [activeTab, setActiveTab] = useState('spending')

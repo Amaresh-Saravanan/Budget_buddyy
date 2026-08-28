@@ -5,28 +5,7 @@ import NoSpendCelebration from '../components/NoSpendCelebration'
 import MonthlyChallenge from '../components/MonthlyChallenge'
 import CategoryBadges from '../components/CategoryBadges'
 import WeeklyProgress from '../components/WeeklyProgress'
-
-// Category colors (matching Dashboard)
-const CATEGORY_COLORS = {
-  'Food': { icon: '🍔', color: '#ff6b6b' },
-  'Transport': { icon: '🚗', color: '#4ecdc4' },
-  'Shopping': { icon: '🛒', color: '#bb86fc' },
-  'Entertainment': { icon: '🎬', color: '#FFD700' },
-  'Bills': { icon: '📄', color: '#00ff88' },
-  'Health': { icon: '💊', color: '#ff9f43' },
-  'Other': { icon: '📦', color: '#a0a0a0' }
-}
-
-// Default budgets
-const DEFAULT_CATEGORY_BUDGETS = {
-  'Food': 6000,
-  'Transport': 3000,
-  'Shopping': 4000,
-  'Entertainment': 2000,
-  'Bills': 5000,
-  'Health': 2000,
-  'Other': 3000
-}
+import { CATEGORY_META as CATEGORY_COLORS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
 
 // Helper to load from localStorage
 const loadFromStorage = (key, defaultValue) => {

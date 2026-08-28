@@ -1,19 +1,15 @@
 import React, { useState } from 'react'
 import { Edit2, Trash2, Plus } from 'lucide-react'
-
-const categoryIcons = {
-  Food: '🍔',
-  Transport: '🚗',
-  Fun: '🎮',
-  Bills: '📱',
-  Others: '➕'
-}
+import { CATEGORY_ICONS as categoryIcons } from '../constants/categories'
 
 const ExpenseList = ({ expenses, onDelete, onUpdate }) => {
   const [editingExpense, setEditingExpense] = useState(null)
 
-  const getTimeAgo = (timestamp) => {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000)
+  const getTimeAgo = (date) => {
+    const then = new Date(date).getTime()
+    if (Number.isNaN(then)) return ''
+
+    const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000))
     const minutes = Math.floor(seconds / 60)
     const hours = Math.floor(minutes / 60)
     const days = Math.floor(hours / 24)
@@ -60,7 +56,7 @@ const ExpenseList = ({ expenses, onDelete, onUpdate }) => {
                     <div className="text-sm text-[#a0a0a0] flex items-center gap-2">
                       <span>{expense.category}</span>
                       <span>•</span>
-                      <span>{getTimeAgo(expense.timestamp)}</span>
+                      <span>{getTimeAgo(expense.date)}</span>
                     </div>
                   </div>
                 </div>

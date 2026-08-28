@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, X, Edit2, TrendingDown, TrendingUp } from 'lucide-react';
-
-// Category icons mapping
-const categoryIcons = {
-  Food: '🍔',
-  Transport: '🚗',
-  Fun: '🎮',
-  Bills: '📱',
-  Others: '➕'
-};
+import { CATEGORY_ICONS as categoryIcons } from '../constants/categories';
 
 const Calendar = ({ expenses = [], savings = [], reminders = [] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());

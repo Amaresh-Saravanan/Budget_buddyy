@@ -1,11 +1,12 @@
 import express from 'express'
-import { 
-  getExpenses, 
-  getExpense, 
-  createExpense, 
-  updateExpense, 
+import {
+  getExpenses,
+  getExpense,
+  createExpense,
+  updateExpense,
   deleteExpense,
-  getExpenseStats 
+  deleteAllExpenses,
+  getExpenseStats
 } from '../controllers/expenseController.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
 
@@ -14,8 +15,9 @@ const router = express.Router()
 // All routes require authentication
 router.use(requireAuth)
 
-// Stats route (must be before /:id to avoid conflict)
+// Stats and bulk-delete routes (must be before /:id to avoid conflict)
 router.get('/stats', getExpenseStats)
+router.delete('/all', deleteAllExpenses)
 
 // CRUD routes
 router.route('/')

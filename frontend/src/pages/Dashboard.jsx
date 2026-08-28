@@ -1,28 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import SmartAlerts from '../components/SmartAlerts'
-
-// Category icons and colors (budgets come from settings)
-const CATEGORY_COLORS = {
-  'Food': { icon: '🍔', color: '#ff6b6b' },
-  'Transport': { icon: '🚗', color: '#4ecdc4' },
-  'Shopping': { icon: '🛒', color: '#bb86fc' },
-  'Entertainment': { icon: '🎬', color: '#FFD700' },
-  'Bills': { icon: '📄', color: '#00ff88' },
-  'Health': { icon: '💊', color: '#ff9f43' },
-  'Other': { icon: '📦', color: '#a0a0a0' }
-}
-
-// Default budgets (fallback if not set in settings)
-const DEFAULT_CATEGORY_BUDGETS = {
-  'Food': 6000,
-  'Transport': 3000,
-  'Shopping': 4000,
-  'Entertainment': 2000,
-  'Bills': 5000,
-  'Health': 2000,
-  'Other': 3000
-}
+import { CATEGORY_META as CATEGORY_COLORS, DEFAULT_CATEGORY_BUDGETS } from '../constants/categories'
 
 // Helper to load from localStorage
 const loadFromStorage = (key, defaultValue) => {
@@ -196,7 +175,6 @@ function Dashboard({ expenses, savings, reminders, income = [] }) {
 
     // Total savings
     const totalSavings = savings.reduce((sum, sav) => sum + (parseFloat(sav.amount) || 0), 0)
-    const totalSavingsTarget = savings.reduce((sum, sav) => sum + (parseFloat(sav.targetAmount) || 0), 0)
 
     // Income and net balance
     const thisMonthIncome = income.filter(inc => {
@@ -209,7 +187,7 @@ function Dashboard({ expenses, savings, reminders, income = [] }) {
     const netBalance = totalIncome - totalExpensesAmount
 
     // Pending reminders
-    const pendingReminders = reminders.filter(rem => !rem.completed).length
+    const pendingReminders = reminders.filter(rem => !rem.isCompleted).length
 
     return {
       monthlyBudget: budget,
@@ -227,7 +205,6 @@ function Dashboard({ expenses, savings, reminders, income = [] }) {
       budgetUsedPercent: Math.round(budgetUsedPercent * 100),
       monthProgress: Math.round(monthProgress * 100),
       totalSavings,
-      totalSavingsTarget,
       monthlyIncome,
       totalIncome,
       netBalance,
@@ -309,7 +286,7 @@ function Dashboard({ expenses, savings, reminders, income = [] }) {
         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
           <p className="text-[#666] text-xs mb-1">Total Saved</p>
           <p className="text-2xl font-bold text-[#00ff88]">{formatCurrency(stats.totalSavings)}</p>
-          <p className="text-[#666] text-xs">of {formatCurrency(stats.totalSavingsTarget)} goal</p>
+          <p className="text-[#666] text-xs">{savings.length} deposit{savings.length === 1 ? '' : 's'}</p>
         </div>
         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
           <p className="text-[#666] text-xs mb-1">Pending Bills</p>

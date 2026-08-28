@@ -1,11 +1,12 @@
 import express from 'express'
-import { 
-  getReminders, 
-  getReminder, 
-  createReminder, 
-  updateReminder, 
+import {
+  getReminders,
+  getReminder,
+  createReminder,
+  updateReminder,
   completeReminder,
   deleteReminder,
+  deleteAllReminders,
   getUpcomingReminders
 } from '../controllers/reminderController.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
@@ -17,6 +18,7 @@ router.use(requireAuth)
 
 // Special routes (must be before /:id)
 router.get('/upcoming', getUpcomingReminders)
+router.delete('/all', deleteAllReminders)
 
 // CRUD routes
 router.route('/')

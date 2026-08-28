@@ -15,6 +15,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import SSOCallback from './pages/SSOCallback'
 import Income from './pages/Income'
+import Toast from './components/Toast'
 import { authAPI, expensesAPI, savingsAPI, remindersAPI, incomeAPI } from './services/api'
 import { LogOut } from 'lucide-react'
 
@@ -87,7 +88,10 @@ function AppContent() {
   const [income, setIncome] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
+  const [toast, setToast] = useState(null)
   const location = useLocation()
+
+  const showToast = (message, type = 'error') => setToast({ message, type })
 
   // Fetch expenses, savings, reminders, and income from the database
   const refetchData = async () => {
@@ -160,6 +164,10 @@ function AppContent() {
   }, [user, getToken])
 
   // Expense handlers - now save to database
+  // Every handler below follows the same rule: only touch local state after
+  // the server confirms the write. A failed request shows an error toast and
+  // leaves state exactly as it was — never "succeeds" locally while the
+  // database silently disagrees.
   const handleAddExpense = async (newExpense) => {
     try {
       const token = await getToken()
@@ -169,8 +177,7 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Failed to add expense:', error)
-      // Still add locally as fallback
-      setExpenses([{ ...newExpense, id: Date.now() }, ...expenses])
+      showToast('Could not save expense. Check your connection and try again.')
     }
   }
 
@@ -181,7 +188,7 @@ function AppContent() {
       setExpenses(expenses.filter(exp => exp.id !== id))
     } catch (error) {
       console.error('Failed to delete expense:', error)
-      setExpenses(expenses.filter(exp => exp.id !== id))
+      showToast('Could not delete expense. Check your connection and try again.')
     }
   }
 
@@ -190,15 +197,13 @@ function AppContent() {
       const token = await getToken()
       const response = await expensesAPI.update(updatedExpense.id, updatedExpense, token)
       if (response.success && response.data) {
-        setExpenses(expenses.map(exp => 
+        setExpenses(expenses.map(exp =>
           exp.id === updatedExpense.id ? response.data : exp
         ))
       }
     } catch (error) {
       console.error('Failed to update expense:', error)
-      setExpenses(expenses.map(exp => 
-        exp.id === updatedExpense.id ? updatedExpense : exp
-      ))
+      showToast('Could not save changes. Check your connection and try again.')
     }
   }
 
@@ -212,7 +217,7 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Failed to add saving:', error)
-      setSavings([{ ...newSaving, id: Date.now() }, ...savings])
+      showToast('Could not save deposit. Check your connection and try again.')
     }
   }
 
@@ -223,7 +228,7 @@ function AppContent() {
       setSavings(savings.filter(sav => sav.id !== id))
     } catch (error) {
       console.error('Failed to delete saving:', error)
-      setSavings(savings.filter(sav => sav.id !== id))
+      showToast('Could not delete deposit. Check your connection and try again.')
     }
   }
 
@@ -232,15 +237,13 @@ function AppContent() {
       const token = await getToken()
       const response = await savingsAPI.update(updatedSaving.id, updatedSaving, token)
       if (response.success && response.data) {
-        setSavings(savings.map(sav => 
+        setSavings(savings.map(sav =>
           sav.id === updatedSaving.id ? response.data : sav
         ))
       }
     } catch (error) {
       console.error('Failed to update saving:', error)
-      setSavings(savings.map(sav => 
-        sav.id === updatedSaving.id ? updatedSaving : sav
-      ))
+      showToast('Could not save changes. Check your connection and try again.')
     }
   }
 
@@ -254,7 +257,7 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Failed to add reminder:', error)
-      setReminders([{ ...newReminder, id: Date.now() }, ...reminders])
+      showToast('Could not save reminder. Check your connection and try again.')
     }
   }
 
@@ -265,7 +268,7 @@ function AppContent() {
       setReminders(reminders.filter(rem => rem.id !== id))
     } catch (error) {
       console.error('Failed to delete reminder:', error)
-      setReminders(reminders.filter(rem => rem.id !== id))
+      showToast('Could not delete reminder. Check your connection and try again.')
     }
   }
 
@@ -274,15 +277,13 @@ function AppContent() {
       const token = await getToken()
       const response = await remindersAPI.update(updatedReminder.id, updatedReminder, token)
       if (response.success && response.data) {
-        setReminders(reminders.map(rem => 
+        setReminders(reminders.map(rem =>
           rem.id === updatedReminder.id ? response.data : rem
         ))
       }
     } catch (error) {
       console.error('Failed to update reminder:', error)
-      setReminders(reminders.map(rem => 
-        rem.id === updatedReminder.id ? updatedReminder : rem
-      ))
+      showToast('Could not save changes. Check your connection and try again.')
     }
   }
 
@@ -296,7 +297,7 @@ function AppContent() {
       }
     } catch (error) {
       console.error('Failed to add income:', error)
-      setIncome([{ ...newIncome, id: Date.now() }, ...income])
+      showToast('Could not save income. Check your connection and try again.')
     }
   }
 
@@ -307,19 +308,57 @@ function AppContent() {
       setIncome(income.filter(inc => inc.id !== id))
     } catch (error) {
       console.error('Failed to delete income:', error)
-      setIncome(income.filter(inc => inc.id !== id))
+      showToast('Could not delete income. Check your connection and try again.')
     }
   }
 
   // Settings handlers
-  const handleClearAllData = () => {
-    setExpenses([])
-    setSavings([])
-    setReminders([])
+  const handleClearAllData = async () => {
+    try {
+      const token = await getToken()
+      await Promise.all([
+        expensesAPI.deleteAll(token),
+        savingsAPI.deleteAll(token),
+        remindersAPI.deleteAll(token),
+        incomeAPI.deleteAll(token)
+      ])
+      setExpenses([])
+      setSavings([])
+      setReminders([])
+      setIncome([])
+    } catch (error) {
+      console.error('Failed to clear all data:', error)
+      showToast('Could not clear all data. Some items may remain — check your connection and try again.')
+      throw error
+    }
   }
 
-  const handleImportExpenses = (importedExpenses) => {
-    setExpenses(prev => [...importedExpenses, ...prev])
+  const handleImportExpenses = async (importedExpenses) => {
+    const token = await getToken()
+    const created = []
+
+    for (const expense of importedExpenses) {
+      try {
+        const response = await expensesAPI.create(expense, token)
+        if (response.success && response.data) {
+          created.push(response.data)
+        }
+      } catch (error) {
+        console.error('Failed to import expense:', error)
+      }
+    }
+
+    if (created.length > 0) {
+      setExpenses(prev => [...created, ...prev])
+    }
+
+    if (created.length === importedExpenses.length) {
+      showToast(`Imported ${created.length} expense(s)`, 'success')
+    } else if (created.length > 0) {
+      showToast(`Imported ${created.length} of ${importedExpenses.length} expenses — the rest failed. Check your connection and try again.`, 'warning')
+    } else {
+      showToast('Could not import expenses. Check your connection and try again.')
+    }
   }
 
   const handleUpdateBudgets = (categoryBudgets, monthlyBudget) => {
@@ -329,6 +368,10 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#e0e0e0]">
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+
       {/* Header with Navigation */}
       <nav className="bg-[#1a1a1a] border-b border-[#333] p-4">
         <div className="max-w-7xl mx-auto">

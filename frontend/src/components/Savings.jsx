@@ -9,8 +9,11 @@ const Savings = ({ savings = [], onAddSaving, onUpdateSaving, onDeleteSaving }) 
   const totalSaved = savings.reduce((sum, saving) => sum + saving.amount, 0);
 
   // Get time ago
-  const getTimeAgo = (timestamp) => {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  const getTimeAgo = (date) => {
+    const then = new Date(date).getTime();
+    if (Number.isNaN(then)) return '';
+
+    const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
@@ -84,7 +87,7 @@ const Savings = ({ savings = [], onAddSaving, onUpdateSaving, onDeleteSaving }) 
                     <div className="text-sm text-[#a0a0a0] flex items-center gap-2">
                       <span>{new Date(saving.date).toLocaleDateString()}</span>
                       <span>•</span>
-                      <span>{getTimeAgo(saving.timestamp)}</span>
+                      <span>{getTimeAgo(saving.date)}</span>
                     </div>
                   </div>
                 </div>
@@ -151,8 +154,7 @@ const AddSavingModal = ({ onClose, onAddSaving }) => {
       id: Date.now(),
       amount: parseFloat(formData.amount),
       note: formData.note || 'Saved money',
-      date: formData.date,
-      timestamp: Date.now()
+      date: formData.date
     };
 
     onAddSaving(newSaving);

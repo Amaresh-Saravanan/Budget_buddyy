@@ -124,6 +124,11 @@ export const expensesAPI = {
     return apiRequest(`/expenses/${id}`, { method: 'DELETE' }, token)
   },
 
+  // Delete every expense for the current user
+  deleteAll: async (token) => {
+    return apiRequest('/expenses/all', { method: 'DELETE' }, token)
+  },
+
   // Get expense statistics
   getStats: async (params = {}, token) => {
     const queryString = new URLSearchParams(params).toString()
@@ -161,6 +166,11 @@ export const savingsAPI = {
   // Delete saving
   delete: async (id, token) => {
     return apiRequest(`/savings/${id}`, { method: 'DELETE' }, token)
+  },
+
+  // Delete every saving entry for the current user
+  deleteAll: async (token) => {
+    return apiRequest('/savings/all', { method: 'DELETE' }, token)
   },
 
   // ===== Saving Goals =====
@@ -233,6 +243,11 @@ export const remindersAPI = {
     return apiRequest(`/reminders/${id}`, { method: 'DELETE' }, token)
   },
 
+  // Delete every reminder for the current user
+  deleteAll: async (token) => {
+    return apiRequest('/reminders/all', { method: 'DELETE' }, token)
+  },
+
   // Get upcoming reminders
   getUpcoming: async (token) => {
     return apiRequest('/reminders/upcoming', { method: 'GET' }, token)
@@ -268,6 +283,11 @@ export const incomeAPI = {
   // Delete income entry
   delete: async (id, token) => {
     return apiRequest(`/income/${id}`, { method: 'DELETE' }, token)
+  },
+
+  // Delete every income entry for the current user
+  deleteAll: async (token) => {
+    return apiRequest('/income/all', { method: 'DELETE' }, token)
   }
 }
 

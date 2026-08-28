@@ -118,9 +118,29 @@ export const deleteIncome = async (req, res) => {
   }
 }
 
+// @desc    Delete every income entry belonging to the user
+// @route   DELETE /api/income/all
+// @access  Private
+export const deleteAllIncome = async (req, res) => {
+  try {
+    const result = await db.delete(incomes)
+      .where(eq(incomes.userId, req.userId))
+      .returning()
+
+    res.json({ success: true, message: `${result.length} income entry(ies) deleted` })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
+
 export default {
   getIncomes,
   createIncome,
   updateIncome,
-  deleteIncome
+  deleteIncome,
+  deleteAllIncome
 }

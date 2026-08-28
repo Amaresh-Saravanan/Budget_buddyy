@@ -3,13 +3,17 @@ import {
   getIncomes,
   createIncome,
   updateIncome,
-  deleteIncome
+  deleteIncome,
+  deleteAllIncome
 } from '../controllers/incomeController.js'
 import { requireAuth } from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+
+// Bulk delete (must be before /:id)
+router.delete('/all', deleteAllIncome)
 
 router.route('/')
   .get(getIncomes)

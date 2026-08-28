@@ -7,7 +7,11 @@ import { eq, and, gte, lte, desc, sql, count } from 'drizzle-orm'
 // @access  Private
 export const getExpenses = async (req, res) => {
   try {
-    const { startDate, endDate, category, limit = 50, page = 1 } = req.query
+    // Default limit is intentionally high, not "unlimited" — it protects
+    // the DB from a pathological query while still returning every expense
+    // a real personal-finance user will ever have in one page. Callers that
+    // need real pagination (e.g. a future search UI) can still pass their own.
+    const { startDate, endDate, category, limit = 5000, page = 1 } = req.query
     
     const conditions = [eq(expenses.userId, req.userId)]
 
@@ -184,6 +188,25 @@ export const deleteExpense = async (req, res) => {
   }
 }
 
+// @desc    Delete every expense belonging to the user
+// @route   DELETE /api/expenses/all
+// @access  Private
+export const deleteAllExpenses = async (req, res) => {
+  try {
+    const result = await db.delete(expenses)
+      .where(eq(expenses.userId, req.userId))
+      .returning()
+
+    res.json({ success: true, message: `${result.length} expense(s) deleted` })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
+
 // @desc    Get expense statistics
 // @route   GET /api/expenses/stats
 // @access  Private
@@ -279,5 +302,6 @@ export default {
   createExpense,
   updateExpense,
   deleteExpense,
+  deleteAllExpenses,
   getExpenseStats
 }

@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-
-// Category icons mapping
-const categoryIcons = {
-  Food: '🍔',
-  Transport: '🚗',
-  Fun: '🎮',
-  Bills: '📱',
-  Others: '➕'
-};
+import { CATEGORY_ICONS as categoryIcons } from '../constants/categories';
 
 const ExpenseForm = ({ show, onClose, onAddExpense }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -29,8 +21,7 @@ const ExpenseForm = ({ show, onClose, onAddExpense }) => {
       category: formData.category,
       amount: parseFloat(formData.amount),
       note: formData.note || formData.category,
-      date: formData.date,
-      timestamp: Date.now()
+      date: formData.date
     };
 
     onAddExpense(newExpense);

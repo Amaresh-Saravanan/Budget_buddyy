@@ -116,14 +116,14 @@ function SmartAlerts({ stats, expenses, reminders, categoryBreakdown, currency =
 
     // 5. Upcoming Reminders (Due within 3 days)
     const upcomingReminders = reminders.filter(rem => {
-      if (rem.completed) return false
-      const dueDate = new Date(rem.dueDate)
+      if (rem.isCompleted) return false
+      const dueDate = new Date(rem.date)
       const daysUntil = Math.ceil((dueDate - now) / 86400000)
       return daysUntil >= 0 && daysUntil <= 3
     })
 
     upcomingReminders.forEach(rem => {
-      const dueDate = new Date(rem.dueDate)
+      const dueDate = new Date(rem.date)
       const daysUntil = Math.ceil((dueDate - now) / 86400000)
       alertsList.push({
         id: `reminder-${rem.id}`,

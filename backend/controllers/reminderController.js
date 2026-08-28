@@ -268,6 +268,25 @@ export const deleteReminder = async (req, res) => {
   }
 }
 
+// @desc    Delete every reminder belonging to the user
+// @route   DELETE /api/reminders/all
+// @access  Private
+export const deleteAllReminders = async (req, res) => {
+  try {
+    const result = await db.delete(reminders)
+      .where(eq(reminders.userId, req.userId))
+      .returning()
+
+    res.json({ success: true, message: `${result.length} reminder(s) deleted` })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
+
 // @desc    Get upcoming reminders for today/this week
 // @route   GET /api/reminders/upcoming
 // @access  Private
@@ -331,5 +350,6 @@ export default {
   updateReminder,
   completeReminder,
   deleteReminder,
+  deleteAllReminders,
   getUpcomingReminders
 }

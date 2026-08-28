@@ -1,9 +1,10 @@
 import express from 'express'
-import { 
-  getSavings, 
-  createSaving, 
-  updateSaving, 
+import {
+  getSavings,
+  createSaving,
+  updateSaving,
   deleteSaving,
+  deleteAllSavings,
   getSavingGoals,
   createSavingGoal,
   updateSavingGoal,
@@ -24,6 +25,9 @@ router.route('/goals')
 router.route('/goals/:id')
   .put(updateSavingGoal)
   .delete(deleteSavingGoal)
+
+// Bulk delete (must be before /:id)
+router.delete('/all', deleteAllSavings)
 
 // Savings CRUD routes
 router.route('/')

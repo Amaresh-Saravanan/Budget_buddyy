@@ -210,6 +210,25 @@ export const deleteSaving = async (req, res) => {
   }
 }
 
+// @desc    Delete every saving entry belonging to the user
+// @route   DELETE /api/savings/all
+// @access  Private
+export const deleteAllSavings = async (req, res) => {
+  try {
+    const result = await db.delete(savings)
+      .where(eq(savings.userId, req.userId))
+      .returning()
+
+    res.json({ success: true, message: `${result.length} saving(s) deleted` })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+}
+
 // ================== SAVING GOALS ==================
 
 // @desc    Get all saving goals
@@ -348,6 +367,7 @@ export default {
   createSaving,
   updateSaving,
   deleteSaving,
+  deleteAllSavings,
   getSavingGoals,
   createSavingGoal,
   updateSavingGoal,
