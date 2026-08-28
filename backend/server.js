@@ -11,6 +11,7 @@ import savingRoutes from './routes/savingRoutes.js'
 import reminderRoutes from './routes/reminderRoutes.js'
 import incomeRoutes from './routes/incomeRoutes.js'
 import syncRoutes from './routes/syncRoutes.js'
+import emailConnectionRoutes from './routes/emailConnectionRoutes.js'
 
 // Load env vars
 dotenv.config()
@@ -75,6 +76,7 @@ app.use('/api/savings', savingRoutes)
 app.use('/api/reminders', reminderRoutes)
 app.use('/api/income', incomeRoutes)
 app.use('/api/sync', syncRoutes)
+app.use('/api/email-connection', emailConnectionRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -94,7 +96,12 @@ app.use((req, res) => {
   })
 })
 
-// Automatic bank-email sync (runs shortly after startup, then on a fixed interval)
+// Automatic bank-email sync (runs shortly after startup, then on a fixed interval).
+// GMAIL_IMAP_USER/GMAIL_IMAP_APP_PASSWORD must point at a mailbox dedicated
+// to BudgetBuddy — every user's forwarded bank alerts land in this one inbox,
+// attributed to the right person via their unique +token address (see
+// services/emailSync.js). Never point this at a personal Gmail account once
+// more than one person uses the app.
 const EMAIL_SYNC_INTERVAL_MS = (parseInt(process.env.EMAIL_SYNC_INTERVAL_MINUTES || '15', 10)) * 60 * 1000
 
 const runEmailSync = async () => {
@@ -144,6 +151,8 @@ app.listen(PORT, () => {
   - GET    /api/income           - Get all income entries
   - POST   /api/income           - Create income entry
   - POST   /api/sync/gmail       - Manually trigger bank-email sync
+  - GET    /api/email-connection       - Get/create your forwarding address
+  - POST   /api/email-connection/check - Check for a new confirmation code / transaction
   `)
 })
 

@@ -105,6 +105,24 @@ export const incomes = pgTable('incomes', {
   updatedAt: timestamp('updated_at').defaultNow()
 })
 
+// ==================== EMAIL CONNECTIONS TABLE ====================
+// One row per user, mapping them to the unique inbox tag
+// (base+<syncToken>@gmail.com) their forwarded bank alerts arrive at.
+// status: 'pending' (token issued, nothing seen yet) ->
+//         'code_ready' (Gmail's forwarding-confirmation email arrived,
+//         code captured) -> 'active' (at least one transaction imported).
+export const emailConnections = pgTable('email_connections', {
+  id: serial('id').primaryKey(),
+  userId: varchar('user_id', { length: 255 }).notNull().unique(),
+  syncToken: varchar('sync_token', { length: 32 }).notNull().unique(),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  confirmationCode: text('confirmation_code'),
+  confirmationRawText: text('confirmation_raw_text'),
+  lastSyncedAt: timestamp('last_synced_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+})
+
 // ==================== SYNCED EMAILS TABLE (dedupe ledger) ====================
 export const syncedEmails = pgTable('synced_emails', {
   id: serial('id').primaryKey(),

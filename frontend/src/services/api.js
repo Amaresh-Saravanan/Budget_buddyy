@@ -300,6 +300,20 @@ export const syncAPI = {
   }
 }
 
+// ==================== EMAIL CONNECTION API ====================
+
+export const emailConnectionAPI = {
+  // Get (or create) this user's forwarding address + connection status
+  get: async (token) => {
+    return apiRequest('/email-connection', { method: 'GET' }, token)
+  },
+
+  // Trigger an immediate check (waiting for the confirmation code or first transaction)
+  checkNow: async (token) => {
+    return apiRequest('/email-connection/check', { method: 'POST' }, token)
+  }
+}
+
 // ==================== HEALTH CHECK ====================
 
 export const healthCheck = async () => {
@@ -319,5 +333,6 @@ export default {
   reminders: remindersAPI,
   income: incomeAPI,
   sync: syncAPI,
+  emailConnection: emailConnectionAPI,
   healthCheck
 }

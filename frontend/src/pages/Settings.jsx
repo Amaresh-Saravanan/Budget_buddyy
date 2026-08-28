@@ -3,6 +3,7 @@ import { useUser, useAuth } from '@clerk/clerk-react'
 import { authAPI } from '../services/api'
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_BUDGETS as DEFAULT_BUDGETS } from '../constants/categories'
 import Toast from '../components/Toast'
+import EmailSyncSetup from '../components/EmailSyncSetup'
 
 const CURRENCY_NAMES = {
   '₹': 'Indian Rupee',
@@ -456,6 +457,7 @@ function Settings({
   const tabs = [
     { id: 'profile', label: '👤 Profile', color: '#bb86fc' },
     { id: 'budget', label: '💰 Budget', color: '#00ff88' },
+    { id: 'bank-sync', label: '📧 Bank Sync', color: '#03DAC6' },
     { id: 'preferences', label: '⚙️ Preferences', color: '#4ecdc4' },
     { id: 'notifications', label: '🔔 Notifications', color: '#FFD700' },
   ]
@@ -843,6 +845,13 @@ function Settings({
               </li>
             </ul>
           </div>
+        </div>
+      )}
+
+      {/* Bank Sync Tab */}
+      {activeTab === 'bank-sync' && (
+        <div className="animate-fadeIn">
+          <EmailSyncSetup />
         </div>
       )}
 
