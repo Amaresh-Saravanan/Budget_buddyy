@@ -109,7 +109,7 @@ export default function Login() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <div id="login-error" role="alert" aria-live="assertive" className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
@@ -117,34 +117,42 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[#374151] text-sm font-medium mb-1.5">Email</label>
+              <label htmlFor="login-email" className="block text-[#374151] text-sm font-medium mb-1.5">Email</label>
               <input
+                id="login-email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full bg-white border border-[#e5e7eb] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[#9ca3af] focus:border-[#bb86fc] focus:ring-2 focus:ring-[#bb86fc]/20 focus:outline-none transition-all"
                 placeholder="Enter email"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? 'login-error' : undefined}
               />
             </div>
 
             <div>
-              <label className="block text-[#374151] text-sm font-medium mb-1.5">Password</label>
+              <label htmlFor="login-password" className="block text-[#374151] text-sm font-medium mb-1.5">Password</label>
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full bg-white border border-[#e5e7eb] rounded-lg px-4 py-3 text-[#1a1a1a] placeholder-[#9ca3af] focus:border-[#bb86fc] focus:ring-2 focus:ring-[#bb86fc]/20 focus:outline-none transition-all pr-12"
                   placeholder="Enter password"
                   required
+                  aria-invalid={!!error}
+                  aria-describedby={error ? 'login-error' : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-[#6b7280]"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
                 </button>
               </div>
             </div>

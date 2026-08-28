@@ -47,10 +47,14 @@ function Toast({ message, type, onClose }) {
   const textColor = type === 'warning' ? 'text-[#0f0f0f]' : type === 'success' ? 'text-[#0f0f0f]' : 'text-white'
 
   return (
-    <div className={`fixed top-4 right-4 ${bgColor} ${textColor} px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeIn flex items-center gap-3`}>
-      <span>{type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ'}</span>
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+      className={`fixed top-4 right-4 ${bgColor} ${textColor} px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeIn flex items-center gap-3`}
+    >
+      <span aria-hidden="true">{type === 'success' ? '✓' : type === 'error' ? '✕' : type === 'warning' ? '⚠' : 'ℹ'}</span>
       <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-70">×</button>
+      <button onClick={onClose} aria-label="Close notification" className="ml-2 hover:opacity-70">×</button>
     </div>
   )
 }
@@ -521,9 +525,9 @@ function Settings({
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-[#bb86fc]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+        <h1 className="text-3xl font-bold text-[#bb86fc]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
           ⚙️ Settings
-        </h2>
+        </h1>
       </div>
 
       {/* Tabs */}
@@ -659,37 +663,51 @@ function Settings({
             <div className="space-y-3">
               <button
                 onClick={() => setShowChangePassword(!showChangePassword)}
+                aria-expanded={showChangePassword}
+                aria-controls="change-password-panel"
                 className="w-full flex items-center justify-between bg-[#0f0f0f] rounded-lg px-4 py-3 hover:bg-[#1a1a1a] transition-all"
               >
                 <span className="text-[#e0e0e0]">Change Password</span>
-                <span className="text-[#666]">{showChangePassword ? '▼' : '→'}</span>
+                <span className="text-[#666]" aria-hidden="true">{showChangePassword ? '▼' : '→'}</span>
               </button>
 
               {showChangePassword && (
-                <div className="bg-[#0f0f0f] rounded-lg p-4 space-y-3 animate-fadeIn">
+                <div id="change-password-panel" className="bg-[#0f0f0f] rounded-lg p-4 space-y-3 animate-fadeIn">
+                  <label htmlFor="settings-current-password" className="sr-only">Current Password</label>
                   <input
+                    id="settings-current-password"
                     type="password"
                     placeholder="Current Password"
                     value={passwords.current}
                     onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
                     className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
+                    aria-invalid={!!passwordError}
+                    aria-describedby={passwordError ? 'settings-password-error' : undefined}
                   />
+                  <label htmlFor="settings-new-password" className="sr-only">New Password (min 6 characters)</label>
                   <input
+                    id="settings-new-password"
                     type="password"
                     placeholder="New Password (min 6 characters)"
                     value={passwords.new}
                     onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                     className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
+                    aria-invalid={!!passwordError}
+                    aria-describedby={passwordError ? 'settings-password-error' : undefined}
                   />
+                  <label htmlFor="settings-confirm-password" className="sr-only">Confirm New Password</label>
                   <input
+                    id="settings-confirm-password"
                     type="password"
                     placeholder="Confirm New Password"
                     value={passwords.confirm}
                     onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-4 py-3 text-[#e0e0e0] focus:border-[#bb86fc] focus:outline-none"
+                    aria-invalid={!!passwordError}
+                    aria-describedby={passwordError ? 'settings-password-error' : undefined}
                   />
                   {passwordError && (
-                    <p className="text-[#ff6b6b] text-sm">{passwordError}</p>
+                    <p id="settings-password-error" role="alert" className="text-[#ff6b6b] text-sm">{passwordError}</p>
                   )}
                   <div className="flex gap-3">
                     <button 
@@ -714,17 +732,20 @@ function Settings({
 
               <button
                 onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
+                aria-expanded={showDeleteConfirm}
+                aria-controls="delete-account-panel"
                 className="w-full flex items-center justify-between bg-[#0f0f0f] rounded-lg px-4 py-3 hover:bg-[#ff6b6b]/10 transition-all border border-transparent hover:border-[#ff6b6b]/30"
               >
                 <span className="text-[#ff6b6b]">Delete Account</span>
-                <span className="text-[#ff6b6b]">⚠️</span>
+                <span className="text-[#ff6b6b]" aria-hidden="true">⚠️</span>
               </button>
 
               {showDeleteConfirm && (
-                <div className="bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-lg p-4 animate-fadeIn">
-                  <p className="text-[#ff6b6b] mb-4">⚠️ This will permanently delete all your data. This action cannot be undone.</p>
-                  <p className="text-[#a0a0a0] text-sm mb-3">Type <span className="text-[#ff6b6b] font-bold">DELETE</span> to confirm:</p>
+                <div id="delete-account-panel" role="alertdialog" aria-labelledby="delete-account-warning" className="bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-lg p-4 animate-fadeIn">
+                  <p id="delete-account-warning" className="text-[#ff6b6b] mb-4">⚠️ This will permanently delete all your data. This action cannot be undone.</p>
+                  <label htmlFor="delete-confirm-input" className="text-[#a0a0a0] text-sm mb-3 block">Type <span className="text-[#ff6b6b] font-bold">DELETE</span> to confirm:</label>
                   <input
+                    id="delete-confirm-input"
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
@@ -999,20 +1020,22 @@ function Settings({
                 <span className="text-[#4ecdc4] text-2xl">📤</span>
               </button>
 
-              <button 
+              <button
                 onClick={() => setShowClearDataConfirm(true)}
+                aria-expanded={showClearDataConfirm}
+                aria-controls="clear-data-panel"
                 className="w-full flex items-center justify-between bg-[#0f0f0f] rounded-lg px-4 py-4 hover:bg-[#ff6b6b]/10 hover:border-[#ff6b6b]/30 border border-transparent transition-all"
               >
                 <div>
                   <p className="text-[#ff6b6b] font-medium">Clear All Data</p>
                   <p className="text-[#666] text-sm">Delete all expenses and start fresh</p>
                 </div>
-                <span className="text-[#ff6b6b] text-2xl">🗑️</span>
+                <span className="text-[#ff6b6b] text-2xl" aria-hidden="true">🗑️</span>
               </button>
 
               {showClearDataConfirm && (
-                <div className="bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-lg p-4 animate-fadeIn">
-                  <p className="text-[#ff6b6b] mb-4">⚠️ Are you sure you want to clear all expenses, savings, and reminders?</p>
+                <div id="clear-data-panel" role="alertdialog" aria-labelledby="clear-data-warning" className="bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-lg p-4 animate-fadeIn">
+                  <p id="clear-data-warning" className="text-[#ff6b6b] mb-4">⚠️ Are you sure you want to clear all expenses, savings, and reminders?</p>
                   <div className="flex gap-3">
                     <button 
                       onClick={handleClearAllData}

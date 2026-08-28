@@ -52,7 +52,7 @@ const ExpenseList = ({ expenses, onDelete, onUpdate }) => {
                 className="group flex items-center justify-between p-4 bg-[#0f0f0f] rounded-lg border border-[#333] hover:border-[#bb86fc] transition-all duration-200 hover:shadow-[0_0_15px_rgba(187,134,252,0.2)]"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-2xl border border-[#333]">
+                  <div className="w-10 h-10 bg-[#1a1a1a] rounded-lg flex items-center justify-center text-2xl border border-[#333]" aria-hidden="true">
                     {categoryIcons[expense.category]}
                   </div>
                   <div>
@@ -66,11 +66,12 @@ const ExpenseList = ({ expenses, onDelete, onUpdate }) => {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-[#ff4444] font-bold text-lg">-{expense.amount.toFixed(2)}</div>
-                  <button 
+                  <button
                     onClick={() => onDelete(expense.id)}
+                    aria-label={`Delete expense: ${expense.note}, ${expense.amount.toFixed(2)}`}
                     className="text-[#ff4444] opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={18} aria-hidden="true" />
                   </button>
                 </div>
               </div>

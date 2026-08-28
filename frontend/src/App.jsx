@@ -85,7 +85,13 @@ function AppContent() {
   const [reminders, setReminders] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
+  const [liveMessage, setLiveMessage] = useState('')
   const location = useLocation()
+
+  const announce = (message) => {
+    setLiveMessage(message)
+    setTimeout(() => setLiveMessage(''), 1000)
+  }
 
   // Sync user to database and fetch data when logged in
   useEffect(() => {
@@ -153,10 +159,12 @@ function AppContent() {
       if (response.success && response.data) {
         setExpenses([response.data, ...expenses])
       }
+      announce(`Expense added: ${newExpense.note || newExpense.category}, ${newExpense.amount}`)
     } catch (error) {
       console.error('Failed to add expense:', error)
       // Still add locally as fallback
       setExpenses([{ ...newExpense, id: Date.now() }, ...expenses])
+      announce(`Expense added: ${newExpense.note || newExpense.category}, ${newExpense.amount}`)
     }
   }
 
@@ -165,9 +173,11 @@ function AppContent() {
       const token = await getToken()
       await expensesAPI.delete(id, token)
       setExpenses(expenses.filter(exp => exp.id !== id))
+      announce('Expense deleted')
     } catch (error) {
       console.error('Failed to delete expense:', error)
       setExpenses(expenses.filter(exp => exp.id !== id))
+      announce('Expense deleted')
     }
   }
 
@@ -196,9 +206,11 @@ function AppContent() {
       if (response.success && response.data) {
         setSavings([response.data, ...savings])
       }
+      announce(`Saving added: ${newSaving.note}, ${newSaving.amount}`)
     } catch (error) {
       console.error('Failed to add saving:', error)
       setSavings([{ ...newSaving, id: Date.now() }, ...savings])
+      announce(`Saving added: ${newSaving.note}, ${newSaving.amount}`)
     }
   }
 
@@ -207,9 +219,11 @@ function AppContent() {
       const token = await getToken()
       await savingsAPI.delete(id, token)
       setSavings(savings.filter(sav => sav.id !== id))
+      announce('Saving deleted')
     } catch (error) {
       console.error('Failed to delete saving:', error)
       setSavings(savings.filter(sav => sav.id !== id))
+      announce('Saving deleted')
     }
   }
 
@@ -238,9 +252,11 @@ function AppContent() {
       if (response.success && response.data) {
         setReminders([response.data, ...reminders])
       }
+      announce(`Reminder added: ${newReminder.title}`)
     } catch (error) {
       console.error('Failed to add reminder:', error)
       setReminders([{ ...newReminder, id: Date.now() }, ...reminders])
+      announce(`Reminder added: ${newReminder.title}`)
     }
   }
 
@@ -249,9 +265,11 @@ function AppContent() {
       const token = await getToken()
       await remindersAPI.delete(id, token)
       setReminders(reminders.filter(rem => rem.id !== id))
+      announce('Reminder deleted')
     } catch (error) {
       console.error('Failed to delete reminder:', error)
       setReminders(reminders.filter(rem => rem.id !== id))
+      announce('Reminder deleted')
     }
   }
 
@@ -290,14 +308,27 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#e0e0e0]">
+      {/* Skip Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-[#bb86fc] focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
+      >
+        Skip to main content
+      </a>
+
+      {/* Live region for dynamic content announcements */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </div>
+
       {/* Header with Navigation */}
-      <nav className="bg-[#1a1a1a] border-b border-[#333] p-4">
+      <header className="bg-[#1a1a1a] border-b border-[#333] p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-[#bb86fc]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <p className="text-2xl font-bold text-[#bb86fc]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               BudgetBuddy
-            </h1>
-            
+            </p>
+
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowExpenseForm(true)}
@@ -305,13 +336,13 @@ function AppContent() {
               >
                 + Add Expense
               </button>
-              
+
               {/* User Menu */}
               <div className="flex items-center gap-3">
                 {user?.imageUrl && (
-                  <img 
-                    src={user.imageUrl} 
-                    alt="Profile" 
+                  <img
+                    src={user.imageUrl}
+                    alt="Profile"
                     className="w-8 h-8 rounded-full border-2 border-[#bb86fc]"
                   />
                 )}
@@ -322,16 +353,16 @@ function AppContent() {
                 <button
                   onClick={() => signOut()}
                   className="p-2 text-[#a0a0a0] hover:text-[#ff6b6b] hover:bg-[#ff6b6b]/10 rounded-lg transition-all"
-                  title="Logout"
+                  aria-label="Sign out"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={20} aria-hidden="true" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex gap-3 overflow-x-auto">
+          <nav aria-label="Main navigation" className="flex gap-3 overflow-x-auto">
             <Link
               to="/dashboard"
               className={`px-5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
@@ -412,12 +443,12 @@ function AppContent() {
             >
               ⚙️ Settings
             </Link>
-          </div>
+          </nav>
         </div>
-      </nav>
+      </header>
 
       {/* Main Content - Routes */}
-      <main className="p-6">
+      <main id="main-content" className="p-6">
         <Routes>
           <Route 
             path="/dashboard" 
