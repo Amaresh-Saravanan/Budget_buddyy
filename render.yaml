@@ -1,0 +1,45 @@
+# Render blueprint for the BudgetBuddy API.
+#
+# Secrets are deliberately marked sync: false — Render prompts for them in the
+# dashboard rather than reading them from this file, so nothing sensitive ends
+# up in git. See DEPLOY.md for what each one is and where to get it.
+#
+# Any host that runs a Node process works just as well; this file only saves
+# you filling the same fields in by hand.
+
+services:
+  - type: web
+    name: budgetbuddy-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # The free plan suspends idle instances, which stops any in-process
+      # timer. 0 disables it in favour of the external schedule below.
+      - key: EMAIL_SYNC_INTERVAL_MINUTES
+        value: "0"
+
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+      # Bank-email sync. Must be a mailbox dedicated to the app.
+      - key: GMAIL_IMAP_USER
+        sync: false
+      - key: GMAIL_IMAP_APP_PASSWORD
+        sync: false
+      - key: BANK_ALERT_SENDER
+        value: alerts@axis.bank.in
+
+      # Shared secret the scheduler presents to POST /api/sync/cron.
+      - key: SYNC_CRON_SECRET
+        generateValue: true

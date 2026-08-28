@@ -16,6 +16,28 @@ import emailConnectionRoutes from './routes/emailConnectionRoutes.js'
 // Load env vars
 dotenv.config()
 
+// Fail fast on missing configuration rather than starting up and then
+// erroring on the first request — a deploy that boots and then 500s on
+// everything is much harder to diagnose than one that refuses to start.
+const REQUIRED_ENV = ['DATABASE_URL', 'CLERK_SECRET_KEY']
+const missing = REQUIRED_ENV.filter((key) => !process.env[key])
+if (missing.length > 0) {
+  console.error(`\n❌ Missing required environment variable(s): ${missing.join(', ')}`)
+  console.error('   Set them in backend/.env locally, or in your host\'s environment settings.\n')
+  process.exit(1)
+}
+
+// Not fatal, but each one silently disables a feature, so say so at boot.
+const OPTIONAL_ENV = {
+  GMAIL_IMAP_USER: 'bank-email sync is disabled',
+  GMAIL_IMAP_APP_PASSWORD: 'bank-email sync is disabled',
+  SYNC_CRON_SECRET: 'the scheduled-sync endpoint will refuse requests',
+  FRONTEND_URL: 'only localhost origins are allowed through CORS'
+}
+for (const [key, consequence] of Object.entries(OPTIONAL_ENV)) {
+  if (!process.env[key]) console.warn(`⚠️  ${key} is not set — ${consequence}`)
+}
+
 // Test database connection
 testConnection()
 
@@ -60,13 +82,24 @@ app.use((req, res, next) => {
   }
 })
 
-// Health check endpoint
+// Liveness: is the process up? Deliberately cheap — a hosting platform may
+// poll this frequently, and it must not depend on the database.
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development'
   })
+})
+
+// Readiness: can the app actually serve requests? Hits the database, so use
+// this for a deploy gate, not for a frequent poll.
+app.get('/api/health/ready', async (req, res) => {
+  const dbOk = await testConnection()
+  if (!dbOk) {
+    return res.status(503).json({ status: 'unavailable', database: 'unreachable' })
+  }
+  res.json({ status: 'ready', database: 'ok', timestamp: new Date().toISOString() })
 })
 
 // Routes
@@ -102,7 +135,7 @@ app.use((req, res) => {
 // attributed to the right person via their unique +token address (see
 // services/emailSync.js). Never point this at a personal Gmail account once
 // more than one person uses the app.
-const EMAIL_SYNC_INTERVAL_MS = (parseInt(process.env.EMAIL_SYNC_INTERVAL_MINUTES || '15', 10)) * 60 * 1000
+const EMAIL_SYNC_INTERVAL_MINUTES = parseInt(process.env.EMAIL_SYNC_INTERVAL_MINUTES || '15', 10)
 
 const runEmailSync = async () => {
   try {
@@ -117,42 +150,53 @@ const runEmailSync = async () => {
   }
 }
 
-setTimeout(runEmailSync, 5000)
-setInterval(runEmailSync, EMAIL_SYNC_INTERVAL_MS)
+// An in-process timer only runs while the process is awake, so it is not a
+// dependable schedule on hosting that suspends idle instances — there,
+// POST /api/sync/cron driven by an external scheduler is the real one.
+// Set EMAIL_SYNC_INTERVAL_MINUTES=0 to turn this off and rely on that.
+if (EMAIL_SYNC_INTERVAL_MINUTES > 0) {
+  setTimeout(runEmailSync, 5000)
+  setInterval(runEmailSync, EMAIL_SYNC_INTERVAL_MINUTES * 60 * 1000)
+}
 
 const PORT = process.env.PORT || 5000
+// Bind all interfaces: container platforms route to the published port from
+// outside the container, and a loopback-only bind is unreachable there.
+const HOST = process.env.HOST || '0.0.0.0'
 
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
+  const mode = process.env.NODE_ENV || 'development'
+  console.log(`\n  BudgetBuddy API — running on ${HOST}:${PORT} (${mode})`)
+
+  if (mode === 'production') {
+    const syncMode = EMAIL_SYNC_INTERVAL_MINUTES > 0
+      ? `in-process every ${EMAIL_SYNC_INTERVAL_MINUTES}m (unreliable if this host suspends idle instances)`
+      : 'external scheduler only, via POST /api/sync/cron'
+    console.log(`  Email sync: ${syncMode}\n`)
+    return
+  }
+
   console.log(`
-  ╔════════════════════════════════════════════════════╗
-  ║   BudgetBuddy API Server                           ║
-  ╠════════════════════════════════════════════════════╣
-  ║   Status:  Running                                 ║
-  ║   Port:    ${PORT}                                    ║
-  ║   Mode:    ${process.env.NODE_ENV || 'development'}                            ║
-  ╚════════════════════════════════════════════════════╝
-  
-  Available endpoints:
-  - GET    /api/health          - Health check
-  - POST   /api/auth/sync       - Sync user from Clerk
-  - GET    /api/auth/me         - Get current user
-  - PUT    /api/auth/settings   - Update settings
-  - PUT    /api/auth/gamification - Update gamification
-  - GET    /api/expenses        - Get all expenses
-  - POST   /api/expenses        - Create expense
-  - GET    /api/expenses/stats  - Get expense stats
-  - GET    /api/savings         - Get all savings
-  - POST   /api/savings         - Create saving
-  - GET    /api/savings/goals   - Get saving goals
-  - POST   /api/savings/goals   - Create saving goal
-  - GET    /api/reminders       - Get all reminders
-  - POST   /api/reminders       - Create reminder
-  - GET    /api/reminders/upcoming - Get upcoming reminders
-  - GET    /api/income           - Get all income entries
-  - POST   /api/income           - Create income entry
-  - POST   /api/sync/gmail       - Manually trigger bank-email sync
+  Endpoints:
+  - GET    /api/health                 - Liveness
+  - GET    /api/health/ready           - Readiness (checks the database)
+  - POST   /api/auth/sync              - Sync user from Clerk
+  - GET    /api/auth/me                - Get current user
+  - DELETE /api/auth/me                - Delete account and all its data
+  - PUT    /api/auth/settings          - Update settings
+  - GET    /api/expenses               - Get all expenses
+  - POST   /api/expenses               - Create expense
+  - DELETE /api/expenses/all           - Delete all expenses
+  - GET    /api/expenses/stats         - Get expense stats
+  - GET    /api/savings                - Get all savings
+  - GET    /api/savings/goals          - Get saving goals
+  - GET    /api/reminders              - Get all reminders
+  - PUT    /api/reminders/:id/complete - Mark a bill paid or unpaid
+  - GET    /api/income                 - Get all income entries
+  - POST   /api/sync/gmail             - Trigger sync (signed-in user)
+  - POST   /api/sync/cron              - Trigger sync (external scheduler)
   - GET    /api/email-connection       - Get/create your forwarding address
-  - POST   /api/email-connection/check - Check for a new confirmation code / transaction
+  - POST   /api/email-connection/check - Check for a confirmation code / transaction
   `)
 })
 

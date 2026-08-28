@@ -96,6 +96,37 @@ Copy that APK to your phone and open it to install (you'll need to allow
 A debug APK is fine for personal use. It expires for Play Store purposes but installs
 and runs indefinitely on your own device.
 
+## Building a signed APK
+
+A debug APK is signed with a throwaway key that Android regenerates freely. A release
+APK is signed with a key that is yours and permanent: it's what lets a future version
+install *over* this one instead of being rejected as a different app. Lose the
+keystore and you can never update an installed app again — back it up somewhere real.
+
+**Generate the keystore once:**
+```bash
+cd frontend/android
+keytool -genkey -v -keystore budgetbuddy-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias budgetbuddy
+```
+
+**Tell Gradle about it** — copy the template and fill in the passwords you just chose:
+```bash
+cp keystore.properties.example keystore.properties
+```
+
+Both the `.jks` and `keystore.properties` are git-ignored. Don't commit either;
+between them they're the private key to your app's identity.
+
+**Build:**
+```bash
+./gradlew assembleRelease
+# → app/build/outputs/apk/release/app-release.apk
+```
+
+If `keystore.properties` is absent the build still configures fine — it just produces
+an unsigned release APK, so a fresh clone of this repo isn't broken by its absence.
+
 ## Signing in on mobile
 
 **Use email + password.** Google and Meta sign-in are hidden in the app on purpose:
@@ -118,6 +149,10 @@ Custom Tab and deep-linking back — doable, but a separate piece of work.
   security config), not just generated output. Build outputs and keystores are ignored.
 - **App identity** lives in `frontend/capacitor.config.json` (`appId`, `appName`).
   Changing `appId` after installing makes Android treat it as a different app.
+- **The icon and splash** are generated from `frontend/assets/`, which is produced by
+  `frontend/scripts/generate-icons.mjs` from SVG. To change the artwork, edit that
+  script, re-run it, then `npx @capacitor/assets generate --android`. The generated
+  PNGs are committed, so you only need this if the artwork changes.
 
 ## Ideas from here
 
@@ -125,4 +160,3 @@ Custom Tab and deep-linking back — doable, but a separate piece of work.
   and works even when email alerts are delayed. Needs a Capacitor SMS-reader plugin and
   the `READ_SMS` permission (fine for a sideloaded personal app; Play Store restricts it).
 - **Local notifications** for bill reminders via `@capacitor/local-notifications`.
-- **App icon and splash screen** via `@capacitor/assets`.

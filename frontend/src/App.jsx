@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
 import { ClerkProvider, SignedIn, SignedOut, useUser, useClerk, useAuth } from '@clerk/clerk-react'
 import Calendar from './components/Calendar'
@@ -17,6 +17,7 @@ import SSOCallback from './pages/SSOCallback'
 import ForgotPassword from './pages/ForgotPassword'
 import Income from './pages/Income'
 import Toast from './components/Toast'
+import { LoadingScreen, ConnectionErrorScreen } from './components/ConnectionState'
 import { authAPI, expensesAPI, savingsAPI, remindersAPI, incomeAPI } from './services/api'
 import {
   DEFAULT_SETTINGS,
@@ -96,6 +97,7 @@ function AppContent() {
   const [income, setIncome] = useState([])
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [isLoadingData, setIsLoadingData] = useState(true)
+  const [connectionError, setConnectionError] = useState(false)
   const [toast, setToast] = useState(null)
   // Settings live here, fetched from the server, so every page reads the same
   // values. Seeded from cache purely so the first paint isn't the default
@@ -128,9 +130,13 @@ function AppContent() {
     }
   }
 
-  // Fetch settings and all records from the database
+  // Fetch settings and all records from the database.
+  // Returns how many of the requests failed, so the caller can tell a single
+  // endpoint erroring apart from the backend being unreachable entirely —
+  // the second deserves a real error screen, the first does not.
   const refetchData = async () => {
     const token = await getToken()
+    let failures = 0
 
     try {
       const me = await authAPI.getMe(token)
@@ -140,6 +146,7 @@ function AppContent() {
         writeCachedSettings(serverSettings)
       }
     } catch (e) {
+      failures++
       console.error('Failed to fetch settings:', e)
     }
 
@@ -149,6 +156,7 @@ function AppContent() {
         setExpenses(expensesRes.data)
       }
     } catch (e) {
+      failures++
       console.error('Failed to fetch expenses:', e)
     }
 
@@ -158,6 +166,7 @@ function AppContent() {
         setSavings(savingsRes.data)
       }
     } catch (e) {
+      failures++
       console.error('Failed to fetch savings:', e)
     }
 
@@ -167,6 +176,7 @@ function AppContent() {
         setReminders(remindersRes.data)
       }
     } catch (e) {
+      failures++
       console.error('Failed to fetch reminders:', e)
     }
 
@@ -176,38 +186,46 @@ function AppContent() {
         setIncome(incomeRes.data)
       }
     } catch (e) {
+      failures++
       console.error('Failed to fetch income:', e)
     }
+
+    const TOTAL_REQUESTS = 5
+    return { failures, allFailed: failures === TOTAL_REQUESTS }
   }
+
+  const initializeUserData = useCallback(async () => {
+    if (!user) return
+
+    setIsLoadingData(true)
+    setConnectionError(false)
+    try {
+      const token = await getToken()
+
+      // If this fails, the backend is unreachable — nothing else will work,
+      // so there's no point attempting the rest.
+      await authAPI.syncUser({
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        imageUrl: user.imageUrl
+      }, token)
+
+      const { allFailed } = await refetchData()
+      if (allFailed) setConnectionError(true)
+    } catch (error) {
+      console.error('Failed to reach BudgetBuddy:', error)
+      setConnectionError(true)
+    } finally {
+      setIsLoadingData(false)
+    }
+  }, [user, getToken])
 
   // Sync user to database and fetch data when logged in
   useEffect(() => {
-    const initializeUserData = async () => {
-      if (user) {
-        try {
-          setIsLoadingData(true)
-          const token = await getToken()
-
-          // Sync user first
-          await authAPI.syncUser({
-            clerkId: user.id,
-            email: user.primaryEmailAddress?.emailAddress,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            imageUrl: user.imageUrl
-          }, token)
-          console.log('User synced to database')
-
-          await refetchData()
-        } catch (error) {
-          console.error('Failed to initialize user data:', error)
-        } finally {
-          setIsLoadingData(false)
-        }
-      }
-    }
     initializeUserData()
-  }, [user, getToken])
+  }, [initializeUserData])
 
   // Expense handlers - now save to database
   // Every handler below follows the same rule: only touch local state after
@@ -426,6 +444,16 @@ function AppContent() {
     } else {
       showToast('Could not import expenses. Check your connection and try again.')
     }
+  }
+
+  // The app is unusable without the server, so these take over the whole
+  // screen rather than rendering an empty dashboard that looks like data loss.
+  if (isLoadingData) {
+    return <LoadingScreen />
+  }
+
+  if (connectionError) {
+    return <ConnectionErrorScreen onRetry={initializeUserData} isRetrying={isLoadingData} />
   }
 
   return (
